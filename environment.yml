@@ -1,0 +1,17 @@
+name: pitch_model_env
+channels:
+  - anaconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9.7
+  - pip=21.2.4
+  - numpy=1.21.5
+  - matplotlib=3.5.0
+  - scipy=1.7.3
+  - setuptools=59.5.0
+  - jupyter=1.0.0
+  - seaborn=0.11.2
+  - pip:
+    - sbi==0.17.2
+    - control==0.9.1
