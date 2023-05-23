@@ -19,7 +19,7 @@ def main(argv):
     
     model = Model(config)
     
-    y_output,errors = model.run(nframes,ntrials)
+    y_output,errors = model.run()
     make_plots(y_output,errors,model.feedback_alteration.onset,ts)
 
 def make_plots(y_output,errors,alt_onset,ts):

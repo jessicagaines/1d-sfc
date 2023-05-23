@@ -6,6 +6,7 @@ Created on Thu Sep  2 12:12:45 2021
 """
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 def plot_trial_timecourse(t_axis,pitch_output,scale='hertz',baseline=np.array([])):
     plt.figure()
@@ -16,6 +17,7 @@ def plot_trial_timecourse(t_axis,pitch_output,scale='hertz',baseline=np.array([]
     plt.title('Pitch Output Response')
     plt.xlabel('Time (s)')
     plt.ylabel('Pitch (' + scale + ')')
+    if not os.path.exists('figs/'): os.makedirs('figs/')
     plt.savefig('figs/trial_timecourse.png')
     plt.show()
     
@@ -33,6 +35,7 @@ def plot_adaptation(pitch_output,scale='hertz',baseline=np.array([]),hz_pert=-6.
     plt.title('Adaptation')
     plt.xlabel('Trial')
     plt.ylabel('Pitch (' + scale + ')')
+    if not os.path.exists('figs/'): os.makedirs('figs/')
     plt.savefig('figs/adaptation.png')
     plt.show()
     
