@@ -9,6 +9,7 @@ from model import Model
 from scipy.stats import ks_2samp
 from scipy.stats import ttest_ind
 import copy
+import os
     
 def violin_plots(data_list,sig_list,effect_list,prior_min,prior_max,labels=None, name=None):
     fig, ax = plt.subplots(1,len(prior_min),figsize=(15,4))
@@ -96,5 +97,6 @@ def marked_dist_plot(samples, prior_min, prior_max, labels=None, means=None, mod
             ax[i,i].axvline(modes[i].item(),color='g')
         if max_likelihood is not None:
             ax[i,i].axvline(max_likelihood[i].item(),color='orange')
+    if not os.path.exists('figs/'): os.makedirs('figs/')
     plt.savefig('figs/param_dists_' + name + '.png',format='png')
     plt.show()
