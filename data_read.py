@@ -9,57 +9,7 @@ import matplotlib.pyplot as plt
 import scipy.io 
 from scipy.interpolate import interp1d
 
-path = 'Cerebellar_Data/'
-ca_control_file = 'control_comb_subj_pertresp'
-ca_patient_file = 'patient_comb_subj_pertresp'
-
-#path = 'lvPPA_Data/'
-#lvppa_control_file = 'control'
-#lvppa_patient_file = 'patient'
-
-def get_combined_data(path,file):
-    struct = scipy.io.loadmat(path + file, squeeze_me=True,simplify_cells=True).get(file)
-    subj_data = struct.get('subj')[0].get('dat')[2]
-    taxis = struct.get('taxis')
-    nsubj = len(struct.get('subj'))        
-    max_trials = 0
-    trial_ns = np.zeros((1,nsubj))
-    for subj in range(nsubj):
-        ntrials = struct.get('subj')[subj].get('dat')[2].shape[0]
-        trial_ns[0,subj] = ntrials
-        if ntrials > max_trials: max_trials = ntrials
-    control_data = np.ndarray([max_trials,subj_data.shape[1],nsubj])
-    control_data[:,:,:] = np.nan
-    for subj in range(nsubj):
-        subj_data = struct.get('subj')[subj].get('dat')[2]
-        control_data[:subj_data.shape[0],:subj_data.shape[1],subj] = subj_data
-    subj_means = np.nanmean(control_data, axis=0)
-    means = np.nanmean(subj_means, axis=-1)
-    if np.isinf(means[0]): means[0] = 0
-    for i in range(1,len(means)):
-        if np.isinf(means[i]):
-            means[i] = means[i-1]
-    return taxis, means
-'''    
-def get_combined_data_jh(path,file):
-    struct = scipy.io.loadmat(path + file, squeeze_me=True,simplify_cells=True).get(file)
-    subj_data = struct.get('subj')[0].get('dat')[2]
-    taxis = struct.get('taxis')
-    nsubj = len(struct.get('subj'))        
-    control_data = np.ndarray([1,subj_data.shape[1]])
-    for pert,flip in enumerate([-1,1]):
-        for subj in range(nsubj):
-            subj_data = flip * struct.get('subj')[subj].get('dat')[pert]
-            control_data = np.concatenate((control_data,subj_data),axis=0)
-    means = np.nanmean(control_data, axis=0)
-    stds = np.nanstd(control_data,axis=0)
-    stde = stds/np.sqrt(control_data.shape[0])
-    if np.isinf(means[0]) or np.isnan(means[0]): means[0] = 0
-    for i in range(1,len(means)):
-        if np.isinf(means[i]) or np.isnan(means[i]):
-            means[i] = means[i-1]
-    return taxis, means, stds, stde
-'''
+### Reading in different data formats
 
 def get_combined_data_jh(path,file):
     struct = scipy.io.loadmat(path + file, squeeze_me=True,simplify_cells=True).get(file)
@@ -79,7 +29,6 @@ def get_combined_data_jh(path,file):
         if np.isinf(means[i]) or np.isnan(means[i]):
             means[i] = means[i-1]
     return taxis, means, stds, stde
-    
     
 def get_combined_data_hk(path,file,variable):
     struct = scipy.io.loadmat(path + file, squeeze_me=True,simplify_cells=True).get(variable)
@@ -99,8 +48,7 @@ def get_combined_data_kr(path,file):
         lower = scipy.io.loadmat(path + file + 'lower.mat', squeeze_me=True,simplify_cells=True).get('lowerp')
     stds = np.zeros((len(means),1))
     stde = means - lower
-    return taxis, means, stds, stde
-    
+    return taxis, means, stds, stde    
     
 def get_ind_data_hk(path,variable):
     struct = scipy.io.loadmat(path + 'centsdev_dat', squeeze_me=True,simplify_cells=True).get('centsdev_dat')
@@ -118,12 +66,15 @@ def get_ind_data_hk(path,variable):
         stdvs[i,:] = subj_std
         sterrs[i,:] = subj_stde
     return taxis, means, stdvs, sterrs
-    
+
+###Downsample data to match simulator output 
 def downsample(array, npts):
     interpolated = interp1d(np.arange(len(array)), array, axis = 0, fill_value = 'extrapolate')
     downsampled = interpolated(np.linspace(0, len(array), npts))
     return downsampled
-    
+
+### Main method for reading in data
+### Determine data format, read in, downsample, and return empirical data    
 def read_obs(path,condition,read_type,subj_type,color):
     observation = dict()
     if subj_type == "control":
@@ -143,7 +94,8 @@ def read_obs(path,condition,read_type,subj_type,color):
     observation['taxis'] = downsample(taxis,300)
     observation['color'] = color
     return observation
-    
+
+### Unused method for reading in data from a single subject    
 def read_indiv_obs(path,condition,read_type,subj_type,color_list=None):
     observation_list = []
     if read_type == 'jh':
