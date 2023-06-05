@@ -53,7 +53,7 @@ class Observer():
         return self.plant.sysd.C * x_predict
     
     def update_state_estimate(self,x_est,kalman_gain,errors):
-        return x_est + kalman_gain * errors
+        return x_est + np.dot(kalman_gain,errors)
     
     def clear_buffers(self):
         self.aud_fdbk_buffer.clear()
@@ -77,6 +77,13 @@ def delay_sensory_feedback(buffers,y_alt):
             delayed_fdbk[i] = buffers[i].pop()
         else: delayed_fdbk[i] = np.nan
     return delayed_fdbk
+    
+class ObserverFixed(Observer):
+    def __init__(self,observer_params, plant, ts):
+        super().__init__(observer_params, plant, ts)
+        self.kal_gain_scaled = np.array([[0.00060795, 0.00109431],
+                                            [0.00071428, 0.00128571],
+                                            [0.04397977, 0.07916358]])
 
 class AdaptiveObserverState(Observer):
     def __init__(self,observer_params, plant, ts):
