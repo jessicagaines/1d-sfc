@@ -1,10 +1,10 @@
 # 1d-sfc
 
-This code implements a one-dimensional state feedback control model as 
-described in Houde & Nagarajan (2011) and Houde et al. (2014). Also 
-included is a Jupyter notebook to fit the SFC model to empirical 
-pitch perturbation data using the SBI package (Cranmer et al., 2020; 
-Tejero-Cantero et al., 2020; https://www.mackelab.org/sbi/)
+This code implements in Python a one-dimensional state feedback control model as 
+described in Houde & Nagarajan (2011) and implemented in Matlab in
+Houde et al. (2014). Also included is a Jupyter notebook to fit the 
+SFC model to empirical pitch perturbation data using the SBI package 
+(Cranmer et al., 2020; Tejero-Cantero et al., 2020; https://www.mackelab.org/sbi/)
 
 1. Create the virtual environment:
 
