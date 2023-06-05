@@ -12,7 +12,7 @@ import copy
 import os
     
 def violin_plots(data_list,sig_list,effect_list,prior_min,prior_max,labels=None, name=None):
-    fig, ax = plt.subplots(1,len(prior_min),figsize=(15,4))
+    fig, ax = plt.subplots(1,len(prior_min),figsize=(15*len(prior_min)/5,4))
     for i in range(len(ax)):
         data_all = pd.DataFrame()
         color_palette = {}
@@ -36,10 +36,12 @@ def violin_plots(data_list,sig_list,effect_list,prior_min,prior_max,labels=None,
         for j,data in enumerate(data_list):
             ax[i].scatter(j,data_list[j].get('max_likelihood')[i],marker='_',color='black',s=300)
         ax[i].set_ylabel('')
-        if labels: ax[i].set_xlabel(labels[i],fontsize=15)
+        if labels: ax[i].set_title(labels[i],fontsize=15)
         buffer = (prior_max[i] - prior_min[i]) * 0.1
-        ax[i].set_xticklabels('')
+        #ax[i].set_xticklabels('')
         ax[i].tick_params(axis='y',which='major',labelsize=15)
+        ax[i].tick_params(axis='x',which='major',labelsize=15)
+        ax[i].set_xlabel('')
         ax[i].yaxis.offsetText.set_fontsize(15)
     plt.tight_layout()
     return ax
@@ -81,7 +83,10 @@ def glassdelta_effect_size(data_list,nparams,nsamples):
     return results
     
 def mse(array1,array2):
-    return ((array1 - array2)**2).mean()
+    return rss(array1,array2)/len(array1)
+    
+def rss(array1,array2):
+    return np.sum((array1 - array2)**2)
     
 def marked_dist_plot(samples, prior_min, prior_max, labels=None, means=None, modes=None, max_likelihood=None,actual_params=None,name=''):
     fig,ax = analysis.pairplot(samples, limits=np.array(list(zip(prior_min,prior_max))), figsize=(24,6))
