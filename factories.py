@@ -5,7 +5,7 @@ Created on Mon Aug 30 15:55:32 2021
 @author: Jessica
 """
 from control_law import ControlLaw,AdaptiveControlLaw,AdaptiveControlLaw_Target
-from observer import Observer,AdaptiveObserverState,AdaptiveObserverFeedback, ObserverFixed
+from observer import Observer,AdaptiveObserverState,AdaptiveObserverFeedback, ObserverFixed, ObserverUnfixed
 from target import Target,AdaptiveTarget,AdaptiveTargetSimple
 
 def ControlLawFactory(controller_config,plant):
@@ -31,8 +31,10 @@ def ObserverFactory(observer_config,plant,ts):
             observer = AdaptiveObserverFeedback(observer_config,plant,ts)
         else: print('Unrecognized observer type')
     if 'fixed_kalman_gain' in observer_config:
-        if int(observer_config['fixed_kalman_gain']) > 0:
+        if observer_config['fixed_kalman_gain'] == 'fixed':
             observer = ObserverFixed(observer_config,plant,ts)
+        if observer_config['fixed_kalman_gain'] == 'unfixed':
+            observer = ObserverUnfixed(observer_config,plant,ts)
     else: 
         observer = Observer(observer_config,plant,ts)
     return observer

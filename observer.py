@@ -16,15 +16,15 @@ class Observer():
         self.aud_fdbk_delay = float(observer_params['aud_fdbk_delay'])
         self.somat_fdbk_delay = float(observer_params['somat_fdbk_delay'])
         self.ts = ts
-        Kalfact = kalfact_base * kalfact_balance
         self.plant = plant
+        self.Kalfact = kalfact_base * kalfact_balance
         self.aud_fdbk_buffer = deque(maxlen=round(self.aud_fdbk_delay/1000/self.ts))
         self.somat_fdbk_buffer = deque(maxlen=round(self.somat_fdbk_delay/1000/self.ts))
         self.aud_pred_buffer = deque(maxlen=round(self.aud_fdbk_delay/1000/self.ts))
         self.somat_pred_buffer = deque(maxlen=round(self.somat_fdbk_delay/1000/self.ts))
-        [X,L,G] = ctrl.dare(plant.sysd.A.T,plant.sysd.C.T,plant.Q,plant.R)
-        kal_gain = X*plant.sysd.C.T * np.linalg.inv(plant.R + plant.sysd.C * X * plant.sysd.C.T)
-        self.kal_gain_scaled = np.multiply(Kalfact,kal_gain)
+        [X,L,G] = ctrl.dare(self.plant.sysd.A.T,self.plant.sysd.C.T,self.plant.Q,self.plant.R)
+        kal_gain = X*plant.sysd.C.T * np.linalg.inv(self.plant.R + self.plant.sysd.C * X * self.plant.sysd.C.T)
+        self.kal_gain_scaled = np.multiply(self.Kalfact,kal_gain)
         
     def run(self, x_est,uprev,y_alt):
         y_delayed = delay_sensory_feedback([self.aud_fdbk_buffer,self.somat_fdbk_buffer],y_alt)
@@ -84,6 +84,17 @@ class ObserverFixed(Observer):
         self.kal_gain_scaled = np.array([[0.00060795, 0.00109431],
                                             [0.00071428, 0.00128571],
                                             [0.04397977, 0.07916358]])
+                                            
+class ObserverUnfixed(Observer):
+    def __init__(self,observer_params, plant, ts):
+        super().__init__(observer_params, plant, ts)
+        self.arn = float(observer_params['aud_noise_covariance'])
+        self.srn = float(observer_params['somat_noise_covariance'])
+        R = np.diagflat([self.arn,self.srn])
+        [X,L,G] = ctrl.dare(plant.sysd.A.T,plant.sysd.C.T,plant.Q,R)
+        kal_gain = X*plant.sysd.C.T * np.linalg.inv(R + plant.sysd.C * X * plant.sysd.C.T)
+        self.kal_gain_scaled = np.multiply(self.Kalfact,kal_gain)
+        
 
 class AdaptiveObserverState(Observer):
     def __init__(self,observer_params, plant, ts):
