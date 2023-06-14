@@ -1,4 +1,4 @@
-name: pitch_model_env
+name: 1d_sfc_env
 channels:
   - anaconda
   - conda-forge
