@@ -43,6 +43,8 @@ def violin_plots(data_list,sig_list,effect_list,prior_min,prior_max,labels=None,
         ax[i].tick_params(axis='x',which='major',labelsize=15)
         ax[i].set_xlabel('')
         ax[i].yaxis.offsetText.set_fontsize(15)
+    #ax[0].text(-1.3,103,"Parameter value",ha='center',va='center',rotation=90,size=20)
+    ax[0].set_ylabel('Parameter value',fontsize=20)
     plt.tight_layout()
     return ax
 
