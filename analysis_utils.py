@@ -8,10 +8,16 @@ import configparser
 from model import Model
 from scipy.stats import ks_2samp
 from scipy.stats import ttest_ind
+from scipy.stats import gaussian_kde
 import copy
 import os
     
-def violin_plots(data_list,sig_list,effect_list,prior_min,prior_max,labels=None, name=None):
+def find_idx_nearest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+def violin_plots(data_list,prior_min,prior_max,effect_size_list,effect_size_se=None,labels=None,show=True):
     fig, ax = plt.subplots(1,len(prior_min),figsize=(15*len(prior_min)/5,4))
     for i in range(len(ax)):
         data_all = pd.DataFrame()
@@ -19,31 +25,36 @@ def violin_plots(data_list,sig_list,effect_list,prior_min,prior_max,labels=None,
         conf_int = np.ndarray((len(data_list),3))
         for j,data in enumerate(data_list):
             data_pop = pd.DataFrame()
-            data_pop['data'] = data.get('samples').numpy()[:,i]
+            param_data = np.sort(data.get('samples').numpy()[:,i])
+            data_pop['data'] = param_data
+            kde = gaussian_kde(param_data)
+            pdf = kde.evaluate(param_data)
+            cdf = np.cumsum(pdf)
+            cdf = cdf/max(cdf)
+            conf_int[j,0] = param_data[find_idx_nearest(cdf, 0.025)]
+            conf_int[j,1] = param_data[find_idx_nearest(cdf, 0.5)]
+            conf_int[j,2] = param_data[find_idx_nearest(cdf, 0.975)]
             color_palette[data.get('name')] = data.get('color')
             data_pop['Population'] = data.get('name')
             data_all = pd.concat([data_all,data_pop])
-            samples = np.sort(data['samples'].numpy(),axis=0)
-            max_log_prob = data.get('max_likelihood')
         sns.violinplot(x='Population',y='data',palette=color_palette,data=data_all, ax=ax[i],orient='v',inner=None)
-        facecolor = 1-(effect_list[i]/max(effect_list))
-        ax[i].set_facecolor([facecolor]*3)
-        if facecolor < 0.5 : textcolor = 'white'
-        else: textcolor = 'black'
-        if sig_list[i] > 0:
-            ax[i].annotate('*',(0.5,0.9),xycoords='axes fraction',size=30,color=textcolor)
-        ax[i].annotate(str(round(effect_list[i],1)),(0.45,0.05),xycoords='axes fraction',size=20,color=textcolor)
+        ax[i].annotate(str(round(effect_size_list[i],1)),(0.45,0.90),xycoords='axes fraction',size=20)
+        if effect_size_se:
+            ax[i].annotate(str(round(effect_size_list[i],1) + '+/-' + round(effect_size_se[i],2)),(0.35,0.90),xycoords='axes fraction',size=20)
         for j,data in enumerate(data_list):
-            ax[i].scatter(j,data_list[j].get('max_likelihood')[i],marker='_',color='black',s=300)
+            #ax[i].scatter(j,data_list[j].get('max_likelihood')[i],marker='.',color='black',s=500)
+            ax[i].scatter(j,conf_int[j,0],marker='_',color='black',s=300)
+            ax[i].scatter(j,conf_int[j,1],marker='_',color='black',s=300)
+            ax[i].scatter(j,conf_int[j,2],marker='_',color='black',s=300)
+            ax[i].plot([j,j],[conf_int[j,0],conf_int[j,2]],color='black')
+            
         ax[i].set_ylabel('')
         if labels: ax[i].set_title(labels[i],fontsize=15)
         buffer = (prior_max[i] - prior_min[i]) * 0.1
-        #ax[i].set_xticklabels('')
         ax[i].tick_params(axis='y',which='major',labelsize=15)
         ax[i].tick_params(axis='x',which='major',labelsize=15)
         ax[i].set_xlabel('')
         ax[i].yaxis.offsetText.set_fontsize(15)
-    #ax[0].text(-1.3,103,"Parameter value",ha='center',va='center',rotation=90,size=20)
     ax[0].set_ylabel('Parameter value',fontsize=20)
     plt.tight_layout()
     return ax
@@ -84,8 +95,8 @@ def glassdelta_effect_size(data_list,nparams,nsamples):
         results[param] = glassdelta
     return results
     
-def mse(array1,array2):
-    return rss(array1,array2)/len(array1)
+def rmse(array1,array2):
+    return np.sqrt(rss(array1,array2)/len(array1))
     
 def rss(array1,array2):
     return np.sum((array1 - array2)**2)
