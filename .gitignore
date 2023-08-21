@@ -10,3 +10,4 @@ simulation-based-inference-AD.ipynb
 individual-subjects.ipynb
 *.bak
 figs/
+sbi_figures/
