@@ -13,14 +13,18 @@ from scipy.interpolate import interp1d
 
 def get_combined_data_jh(path,file):
     struct = scipy.io.loadmat(path + file, squeeze_me=True,simplify_cells=True).get(file)
-    subj_data = struct.get('subj')[0].get('dat')[2]
+    nsubj = len(struct.get('subj'))    
     taxis = struct.get('taxis')
-    nsubj = len(struct.get('subj'))        
-    control_data = np.ndarray([1,subj_data.shape[1]])
+    ntrials = 0
+    for subj in range(nsubj):
+        ntrials = ntrials + struct.get('subj')[subj].get('dat')[2].shape[0]
+    control_data = np.ndarray([ntrials,len(taxis)])
+    curr_trial = 0
     for pert,flip in enumerate([-1,1]):
         for subj in range(nsubj):
             subj_data = flip * struct.get('subj')[subj].get('dat')[pert]
-            control_data = np.concatenate((control_data,subj_data),axis=0)
+            control_data[curr_trial:curr_trial + len(subj_data),:] = subj_data
+            curr_trial = curr_trial + len(subj_data)
     means = np.nanmean(control_data, axis=0)
     stds = np.nanstd(control_data,axis=0)
     stde = stds/np.sqrt(control_data.shape[0])
@@ -28,7 +32,7 @@ def get_combined_data_jh(path,file):
     for i in range(1,len(means)):
         if np.isinf(means[i]) or np.isnan(means[i]):
             means[i] = means[i-1]
-    return taxis, means, stds, stde
+    return taxis, means, stds, stde, ntrials
     
 def get_combined_data_hk(path,file,variable):
     struct = scipy.io.loadmat(path + file, squeeze_me=True,simplify_cells=True).get(variable)
@@ -83,7 +87,7 @@ def read_obs(path,condition,read_type,subj_type,color):
         name = condition + " " + subj_type +'s'
         observation['name'] = name
     if read_type == 'jh':
-            taxis, data_means, data_stdv, data_stde = get_combined_data_jh(path,subj_type + '_comb_subj_pertresp')
+            taxis, data_means, data_stdv, data_stde, ntrials = get_combined_data_jh(path,subj_type + '_comb_subj_pertresp')
     elif read_type == 'hk':
         taxis, data_means, data_stdv, data_stde = get_combined_data_hk(path,subj_type + '_avgs.mat',subj_type + '_absperttrial')
     elif read_type == 'kr':
@@ -93,6 +97,7 @@ def read_obs(path,condition,read_type,subj_type,color):
     observation['stde'] = downsample(data_stde,300)
     observation['taxis'] = downsample(taxis,300)
     observation['color'] = color
+    observation['ntrials'] = ntrials
     return observation
 
 ### Unused method for reading in data from a single subject    
