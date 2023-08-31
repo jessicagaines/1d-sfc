@@ -34,7 +34,10 @@ def make_plots(y_output,errors,alt_onset,ts):
     else: baseline = np.mean(pitch_output[:int(np.floor(0.1/ts)),:],axis=0)
     baseline = np.asarray([starting_pitch]*ntrials)
     plotting.plot_trial_timecourse(t_axis,pitch_output,scale='Hz',baseline=baseline)
+    plotting.plot_trial_timecourse(t_axis,pitch_output,scale='cents',baseline=baseline)
     plotting.plot_adaptation(pitch_output,scale='percent',baseline=starting_pitch,endframe=round(0.1/ts))
+    
+
     
     
 main(['pitch_pert_configs.ini'])
