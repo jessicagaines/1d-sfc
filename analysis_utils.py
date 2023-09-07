@@ -2,15 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from sbi import analysis as analysis
+from sbi import utils as utils
+from sbi.inference.base import infer
 import pandas as pd
 import seaborn as sns
 import configparser
 from model import Model
-from scipy.stats import ks_2samp
-from scipy.stats import ttest_ind
 from scipy.stats import gaussian_kde
 import copy
 import os
+import pickle
     
 def find_idx_nearest(array, value):
     array = np.asarray(array)
@@ -66,7 +67,6 @@ def glassdelta_effect_size(samples1,samples2):
     mean1 = np.mean(samples1,axis=0)
     mean2 = np.mean(samples2,axis=0)
     var1 = np.var(samples1,axis=0)
-    var2 = np.var(samples2,axis=0)
     glassdelta = np.abs((mean1-mean2)/np.sqrt(var1))
     return glassdelta
     
@@ -120,3 +120,150 @@ def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=[-5,45],leg
             ax.set_ylim(ylim)
         if legend:
             ax.annotate(obs.get('name'), (0.65, 36+4*i), fontsize=18, color=obs.get('color'))
+            
+def override_params(config,parameter_set, ablate_values=None, ablate_index=None):
+    if ablate_values is not None and ablate_index is not None:
+        parameter_set_new = np.insert(parameter_set,ablate_index,ablate_values[ablate_index])
+    else: parameter_set_new = parameter_set
+    config['Observer']['aud_fdbk_delay'] = str(parameter_set_new[0].item())
+    config['Observer']['somat_fdbk_delay'] = str(parameter_set_new[1].item())
+    config['Vocal_Tract']['aud_noise_covariance'] = str(10**parameter_set_new[2].item())
+    config['Vocal_Tract']['somat_noise_covariance'] = str(10**parameter_set_new[2].item() / parameter_set_new[3].item())
+    config['Controller']['controller_gain'] = str(parameter_set_new[4].item())
+
+def build_simulator(training_noise_scale, ablate_values=None, ablate_index=None):
+    return lambda parameter_set: simulator_configurable(parameter_set, training_noise_scale, ablate_values, ablate_index)
+
+def simulator_configurable(parameter_set, training_noise_scale, ablate_values, ablate_index):
+    config = configparser.ConfigParser()
+    config.read('pitch_pert_configs.ini')
+    override_params(config,parameter_set, ablate_values, ablate_index)
+    model = Model(config)
+    y_output,errors = model.run()
+    pitch_output = y_output[:,0,0]
+    pitch_output[pitch_output < 50] = 50
+    pitch_baseline = np.mean(pitch_output[0:50])
+    pitch_output_cents = 1200 * np.log2(pitch_output/pitch_baseline)
+    pitch_output_cents_wnoise = pitch_output_cents + ((np.random.rand(len(pitch_output_cents)) - 0.5) * training_noise_scale)
+    return pitch_output_cents_wnoise
+
+def sbi_train(path,subdir,simulator,prior_min,prior_max,seed,n_simulations):
+    prior = utils.torchutils.BoxUniform(low=torch.as_tensor(prior_min), high=torch.as_tensor(prior_max))
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    posterior = infer(simulator,prior,method='SNPE', num_simulations=n_simulations, num_workers=4)
+    posterior_save = {'prior_min':prior_min,'prior_max':prior_max,'posterior':posterior,'seed':seed}
+    if not os.path.exists(os.path.join(path,subdir,'posterior')): 
+        os.mkdir(os.path.join(path,subdir,'posterior'))
+    with open(os.path.join(path,subdir,'posterior','seed' + str(seed) + '.pkl'), "wb") as handle:
+        pickle.dump(posterior_save,handle)
+    
+def sample_posterior(path,subdir,simulator,obs_list,seed,n_samples,labels,plot=True):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    with open(os.path.join(path,subdir,'posterior','seed' + str(seed) + '.pkl'), "rb") as handle:
+        posterior_dict = pickle.load(handle)
+    posterior_new = posterior_dict.get('posterior')
+    prior_min = posterior_dict.get('prior_min')
+    prior_max = posterior_dict.get('prior_max')
+    all_samples = np.ndarray([n_samples,len(labels),len(obs_list)])
+    for i, observation in enumerate(obs_list):
+        samples = posterior_new.sample((n_samples,), x=observation.get('data'))
+        all_samples[:,:,i] = samples.numpy()
+        log_probability = posterior_new.log_prob(samples, x=observation.get('data'))
+        max_joint_likelihood = samples[torch.argmax(log_probability)]
+        medians = torch.median(samples,axis=0).values
+        if plot: 
+            fig = marked_dist_plot(samples, prior_min, prior_max, labels, max_likelihood=max_joint_likelihood, medians=medians, name=observation.get('name'))
+            if not os.path.exists(os.path.join(path,subdir,'marginal_dist')): os.mkdir(os.path.join(path,subdir,'marginal_dist'))
+            fig.savefig(os.path.join(path,subdir,'marginal_dist', 'marginal_dist_' + subdir + "_" + observation.get('name') + '_seed' + str(seed) + '.png'),format='png')
+    if plot:
+        effect_size = glassdelta_effect_size(all_samples[:,:,0],all_samples[:,:,1])
+        fig = violin_plots(obs_list,all_samples,prior_min,prior_max,effect_size_list=effect_size,labels=labels,show=False)
+        if not os.path.exists(os.path.join(path,subdir,'violin_plots')): os.mkdir(os.path.join(path,subdir,'violin_plots'))
+        fig.savefig(os.path.join(path,subdir,'violin_plots', 'violin_plots_' + subdir + '_seed' + str(seed) + '.png'),format='png')
+        if not os.path.exists(os.path.join(path,subdir,'pitch_plots')): os.mkdir(os.path.join(path,subdir,'pitch_plots'))
+        fig, rmse_mean, rmse_sterr = plot_actual_inferred_data(simulator,obs_list,np.median(all_samples,axis=0),xlabel=True,ylabel=True,legend=True)
+        fig.savefig(os.path.join(path,subdir,'pitch_plots', 'pitch_plots_' + subdir + '_seed' + str(seed) + '.png'),format='png')
+    return all_samples
+
+def plot_actual_inferred_data(simulator, obs_list,max_likelihood_params,name=None,xlabel=False,ylabel=False,ylim=[-5,45],legend=True,title='',figlabel=''):
+    ntrials = 100
+    rmse_all = np.ndarray((len(obs_list), ntrials))
+    fig, ax = plt.subplots()
+    ax.text(-0.6,20,title,ha='center',va='center',rotation=90,size=24,fontweight='bold')
+    ax.text(-0.7,50,figlabel,ha='center',va='center',size=45)
+    plot_actual_data(obs_list,ax,xlabel,ylabel,ylim,legend=True)
+    for i, obs in enumerate(obs_list):
+        plot_color = obs.get('color')
+        taxis = obs_list[0].get('taxis')
+        inferred_all = np.ndarray((ntrials,len(taxis)))
+        for j in range(ntrials):
+            sim_output = simulator(max_likelihood_params[:,i])
+            inferred_all[j,:] = sim_output
+            error = rmse(obs.get('data'), sim_output)
+            rmse_all[i,j] = error
+        inferred = np.mean(inferred_all,axis=0)
+        sterr = np.std(inferred_all,axis=0) / np.sqrt(ntrials)
+        ax.plot(taxis,inferred,label=obs.get('name')+' inferred',linewidth=5,color=plot_color)
+        ax.plot(taxis,inferred-sterr, linewidth=2,color=plot_color)
+        ax.plot(taxis,inferred+sterr, linewidth=2, color=plot_color)
+    rmse_mean = np.mean(rmse_all,axis=1)
+    rmse_sterr = np.std(rmse_all,axis=1) / np.sqrt(ntrials)
+    return fig, rmse_mean, rmse_sterr
+
+def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,prior_max_all,all_labels,train=True,ablate_index=None,ablate_values=None,verbose=True):
+    if not os.path.exists(os.path.join(path,subdir)): os.mkdir(os.path.join(path,subdir))
+    labels = copy.deepcopy(all_labels)
+    prior_min = copy.deepcopy(prior_min_all)
+    prior_max = copy.deepcopy(prior_max_all)
+    if ablate_index is not None:
+        ablated_label = labels.pop(ablate_index)
+        prior_min.pop(ablate_index)
+        prior_max.pop(ablate_index)
+        title = 'Fixed ' + ablated_label.split('(')[0]
+        figlabel = ['A','B','C','D','E'][ablate_index]
+    else: 
+        title = ''
+        figlabel = ''
+    combined_samples = np.ndarray((n_reps*n_samples,len(labels),len(obs_list)))
+    for seed in range(n_reps):
+        # train
+        if ablate_index is None: simulator = build_simulator(training_noise_scale=7)
+        if ablate_index is not None: simulator = build_simulator(training_noise_scale=7, ablate_values=ablate_values, ablate_index=ablate_index)
+        if train: sbi_train(path,subdir,simulator,prior_min,prior_max,seed,n_simulations)
+        # sample
+        all_samples = sample_posterior(path,subdir,simulator,obs_list,seed,n_samples,labels,plot=verbose)
+        for i in range(len(obs_list)):
+            combined_samples[n_samples*seed:n_samples*(seed+1),:,i] = all_samples[:,:,i]
+    inferred_values = np.median(combined_samples, axis=0)
+    # bootstrap
+    n_bootstrap = 100
+    size_bootstrap = 1000
+    combined_effect_size = np.ndarray([len(labels),n_bootstrap])
+    for b in range(n_bootstrap):
+        indeces = np.random.randint(0,n_samples*n_reps,size_bootstrap)
+        subset = combined_samples[indeces,:,:]
+        combined_effect_size[:,b] = glassdelta_effect_size(np.squeeze(subset[:,:,0]),np.squeeze(subset[:,:,1]))
+    effect_size_list = np.mean(combined_effect_size, axis=1)
+    effect_size_stderr = np.std(combined_effect_size,axis=1) / np.sqrt(n_bootstrap)
+    if ablate_index is None: simulator = build_simulator(training_noise_scale=0)
+    else: simulator = build_simulator(training_noise_scale=0, ablate_values=ablate_values, ablate_index=ablate_index)
+    fig, rmse_mean, rmse_sterr = plot_actual_inferred_data(simulator,obs_list,inferred_values,xlabel=True,ylabel=True,legend=True,title=title,figlabel=figlabel)
+    fig.savefig(os.path.join(path,subdir,'pitch_plots' + '.png'),format='png')
+    fig = violin_plots(obs_list,combined_samples,prior_min,prior_max,effect_size_list=effect_size_list,effect_size_stderr=effect_size_stderr,labels=labels,conf_int_level=0.95,show=True)
+    fig.savefig(os.path.join(path,subdir,'violin_plots' + '.png'),format='png')
+    return inferred_values, rmse_mean, rmse_sterr
+
+def bar_plot(rmse_means_all,rmse_stdev_all,obs_list,labels):
+    bar_df = pd.DataFrame(rmse_means_all,columns=[obs_list[0].get('name'),obs_list[1].get('name')])
+    se_df = pd.DataFrame(rmse_stdev_all,columns = [obs_list[0].get('name'),obs_list[1].get('name')])
+    bar_df['Labels'] = labels
+    se_df['Labels'] = labels
+    ax = bar_df.plot(kind='bar',yerr=se_df,rot=0,color=[obs_list[0].get('color'),obs_list[1].get('color')],figsize=(5,5))
+    ax.set_ylabel('RMSE (cents)',fontsize=12)
+    ax.set_xlabel('Reduced model',fontweight='bold',fontsize=12)
+    ax.set_xticks(ticks=range(len(labels)),labels=labels,fontsize=12,rotation=30,ha='right')
+    tick_labels = ax.get_xticklabels()
+    tick_labels[0].set_fontweight('bold')
+    plt.tight_layout()
