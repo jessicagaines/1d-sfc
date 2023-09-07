@@ -15,12 +15,11 @@ class VocalTract():
         self.arn = float(vocal_tract_params['aud_noise_covariance'])
         self.srn = float(vocal_tract_params['somat_noise_covariance'])
         self.qn = float(vocal_tract_params['state_noise_covariance'])
-        observation_gain = float(vocal_tract_params['observation_gain'])
         damping = damping_ratio*2*np.sqrt(m*k)
         A = np.array([[0, 1], [-k/m, -damping/m]])
         B = np.array([[0, k/m]]).T
         #C = np.array([[100, 0], [100, 0]])
-        C = np.array([[observation_gain, 0], [observation_gain, 0]])
+        C = np.array([[1, 0], [1, 0]])
         D = np.array([[0,0]]).T # auditory and somatosensory feedback
         sys1 = ctrl.ss(A,B,C,D) 
         sys2 = ctrl.ss(0,1,1,0); 
