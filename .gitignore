@@ -11,4 +11,4 @@ individual-subjects.ipynb
 *.bak
 figs/
 sbi_figures/
-SBI_results/
+SBI_results*

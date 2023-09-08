@@ -12,6 +12,7 @@ from analysis_utils import plot_actual_data, run_sbi, bar_plot
 import matplotlib.pyplot as plt
 import os
 import copy
+import sys
 
 
 def main(argv):
@@ -103,3 +104,6 @@ def main(argv):
         
     bar_plot(rmse_means_all,rmse_stderr_all,observation_list,labels)
     plt.savefig(os.path.join(path,'bar_plot.png'))
+    
+if __name__ == "__main__":
+    main(sys.argv[1:])
