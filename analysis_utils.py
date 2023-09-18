@@ -120,25 +120,18 @@ def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=[-5,45],leg
             ax.set_ylim(ylim)
         if legend:
             ax.annotate(obs.get('name'), (0.65, 36+4*i), fontsize=18, color=obs.get('color'))
-            
-def override_params(config,parameter_set, ablate_values=None, ablate_index=None):
+
+def build_simulator(training_noise_scale, ablate_values=None, ablate_index=None):
+    config = configparser.ConfigParser()
+    config.read('pitch_pert_configs.ini')
+    default_model = Model(config)
+    return lambda parameter_set: simulator_configurable(parameter_set, default_model, training_noise_scale, ablate_values, ablate_index)
+
+def simulator_configurable(parameter_set, model, training_noise_scale, ablate_values, ablate_index):
     if ablate_values is not None and ablate_index is not None:
         parameter_set_new = np.insert(parameter_set,ablate_index,ablate_values[ablate_index])
     else: parameter_set_new = parameter_set
-    config['Observer']['aud_fdbk_delay'] = str(parameter_set_new[0].item())
-    config['Observer']['somat_fdbk_delay'] = str(parameter_set_new[1].item())
-    config['Vocal_Tract']['aud_noise_covariance'] = str(10**parameter_set_new[2].item())
-    config['Vocal_Tract']['somat_noise_covariance'] = str(10**parameter_set_new[2].item() / parameter_set_new[3].item())
-    config['Controller']['controller_gain'] = str(parameter_set_new[4].item())
-
-def build_simulator(training_noise_scale, ablate_values=None, ablate_index=None):
-    return lambda parameter_set: simulator_configurable(parameter_set, training_noise_scale, ablate_values, ablate_index)
-
-def simulator_configurable(parameter_set, training_noise_scale, ablate_values, ablate_index):
-    config = configparser.ConfigParser()
-    config.read('pitch_pert_configs.ini')
-    override_params(config,parameter_set, ablate_values, ablate_index)
-    model = Model(config)
+    model.set_tunable_params(parameter_set_new)
     y_output,errors = model.run()
     pitch_output = y_output[:,0,0]
     pitch_output[pitch_output < 50] = 50

@@ -10,11 +10,13 @@ import numpy as np
 import control.matlab as ctrl
 
 class Observer():
-    def __init__(self,observer_params, plant, ts):
+    def __init__(self,observer_params, plant, ts,aud_delay=None,som_delay=None):
         kalfact_base = float(observer_params['kalfact_base'])
         kalfact_balance = string2dtype_array(observer_params['kalfact_balance'],'float')
-        self.aud_fdbk_delay = float(observer_params['aud_fdbk_delay'])
-        self.somat_fdbk_delay = float(observer_params['somat_fdbk_delay'])
+        if aud_delay is None: self.aud_fdbk_delay = float(observer_params['aud_fdbk_delay'])
+        else: self.aud_fdbk_delay = aud_delay
+        if som_delay is None: self.somat_fdbk_delay = float(observer_params['somat_fdbk_delay'])
+        else: self.somat_fdbk_delay = som_delay
         self.ts = ts
         self.plant = plant
         self.Kalfact = kalfact_base * kalfact_balance

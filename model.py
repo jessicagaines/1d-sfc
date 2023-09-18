@@ -12,6 +12,7 @@ import numpy as np
 
 class Model():
     def __init__(self, config):
+        self.config = config
         self.ts = float(config['Experiment']['sampling_time'])
         self.nframes = round(float(config['Experiment']['end_time'])/self.ts)
         self.ntrials = int(config['Experiment']['n_trials'])
@@ -43,3 +44,8 @@ class Model():
             self.observer.adapt(np.mean(errors[:,:,i],axis=0))
             self.target.adapt(self.observer.get_bias(),y-yalt)
         return y_output,errors
+        
+    def set_tunable_params(self,parameter_set):
+        self.plant = VocalTract(self.config['Vocal_Tract'],self.ts,arn=10**parameter_set[2],srn=10**parameter_set[2].item()/parameter_set[3].item())
+        self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0].item(),som_delay=parameter_set[1].item())
+        self.controller.ugain = parameter_set[4].item()

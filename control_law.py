@@ -7,7 +7,7 @@ Created on Fri Apr 23 09:13:48 2021
 import numpy as np
 
 class ControlLaw():
-    def __init__(self,control_params,plant):
+    def __init__(self,control_params,plant,ugain=None):
         self.ugain = float(control_params['controller_gain'])
         self.u_noise = float(control_params['controller_noise'])
         aud_fdbk_alpha = float(control_params['aud_fdbk_alpha'])
