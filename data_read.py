@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io 
 from scipy.interpolate import interp1d
+import pandas as pd
 
 ### Reading in different data formats
 
@@ -32,7 +33,7 @@ def get_combined_data_jh(path,file):
     for i in range(1,len(means)):
         if np.isinf(means[i]) or np.isnan(means[i]):
             means[i] = means[i-1]
-    return taxis, means, stds, stde, ntrials
+    return taxis, means, stds, stde
     
 def get_combined_data_hk(path,file,variable):
     struct = scipy.io.loadmat(path + file, squeeze_me=True,simplify_cells=True).get(variable)
@@ -40,6 +41,7 @@ def get_combined_data_hk(path,file,variable):
     means = struct.get('mean')
     stds = struct.get('std')
     stde = struct.get('stde')
+    ntrials = struct.get('ntrials')
     return taxis, means, stds, stde
 
 def get_combined_data_kr(path,file):
@@ -52,7 +54,16 @@ def get_combined_data_kr(path,file):
         lower = scipy.io.loadmat(path + file + 'lower.mat', squeeze_me=True,simplify_cells=True).get('lowerp')
     stds = np.zeros((len(means),1))
     stde = means - lower
-    return taxis, means, stds, stde    
+    return taxis, means, stds, stde
+
+def get_combined_data_csv(path,variable):
+    data = pd.read_csv(path+variable+'.csv',header=1,usecols=[0,1], names=['Time','Pitch'])
+    data = data.sort_values('Time')
+    taxis = np.squeeze(data[['Time']])
+    means = np.squeeze(data[['Pitch']])
+    stds = [0] * len(taxis)
+    stde = [0] * len(taxis)
+    return taxis, means, stds, stde
     
 def get_ind_data_hk(path,variable):
     struct = scipy.io.loadmat(path + 'centsdev_dat', squeeze_me=True,simplify_cells=True).get('centsdev_dat')
@@ -87,17 +98,18 @@ def read_obs(path,condition,read_type,subj_type,color):
         name = condition + " " + subj_type +'s'
         observation['name'] = name
     if read_type == 'jh':
-            taxis, data_means, data_stdv, data_stde, ntrials = get_combined_data_jh(path,subj_type + '_comb_subj_pertresp')
+            taxis, data_means, data_stdv, data_stde = get_combined_data_jh(path,subj_type + '_comb_subj_pertresp')
     elif read_type == 'hk':
         taxis, data_means, data_stdv, data_stde = get_combined_data_hk(path,subj_type + '_avgs.mat',subj_type + '_absperttrial')
     elif read_type == 'kr':
         taxis, data_means, data_stdv, data_stde = get_combined_data_kr(path,condition.lower())
+    elif read_type == 'csv':
+        taxis, data_means, data_stdv, data_stde = get_combined_data_csv(path,subj_type)
     observation['data'] = downsample(data_means,300)
     observation['stdv'] = downsample(data_stdv,300)
     observation['stde'] = downsample(data_stde,300)
     observation['taxis'] = downsample(taxis,300)
     observation['color'] = color
-    observation['ntrials'] = ntrials
     return observation
 
 ### Unused method for reading in data from a single subject    
