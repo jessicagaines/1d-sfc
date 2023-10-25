@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import os
 import copy
 import sys
+import pickle
 
 
 def main(argv):
@@ -23,30 +24,44 @@ def main(argv):
     
     with open(logpath, 'w') as logfile:
         logfile.write("00:00:00 Start\n")
-        
+    
     all_labels = ['Aud Delay (ms)',
               'Somat Delay (ms)',
               'Fb Noise Var (log)',
               'Fb Noise Ratio (Aud:Som)',
-              'Controller Gain']
+              'Controller Gain',
+              ]
     
     observation_list = []
         
     observation_list.append(read_obs('pitch_pert_data/CA_Data/','CA','jh','control',"#C7221F"))
     observation_list.append(read_obs('pitch_pert_data/CA_Data/','CA','jh','patient',"#456990"))
-    plot_actual_data(observation_list,xlabel='Time (s)',ylabel='Pitch (cents)',legend=True,show_pert=True,alpha=1)
-    plt.savefig(os.path.join(path,'actual_data.pdf'))
+    #observation_list.append(read_obs('pitch_pert_data/LD_Data/','LD','hk','control',"#C7221F"))
+    #observation_list.append(read_obs('pitch_pert_data/LD_Data/','LD','hk','patient',"#456990"))
+    #observation_list.append(read_obs('pitch_pert_data/LD_Data_Thomas2020/','LD','thomas2020','control',"#C7221F"))
+    #observation_list.append(read_obs('pitch_pert_data/LD_Data_Thomas2020/','LD','thomas2020','patient',"#456990"))
+    #observation_list.append(read_obs('pitch_pert_data/LD_Data_follow/','LD','hk','control',"#C7221F"))
+    #observation_list.append(read_obs('pitch_pert_data/LD_Data_follow/','LD','hk','patient',"#456990"))
+    #observation_list.append(read_obs('pitch_pert_data/LD_Data_oppose/','LD','hk','control',"#C7221F"))
+    #observation_list.append(read_obs('pitch_pert_data/LD_Data_oppose/','LD','hk','patient',"#456990"))
+    plot_actual_data(observation_list,xlabel='Time (s)',ylabel='Pitch (cents)',legend=True,show_pert=True,alpha=1,ylim=None)
+    plt.tight_layout()
+    plt.savefig(os.path.join(path,'actual_data.png'))
     with open(logpath, 'a') as logfile:
         logfile.write(time.strftime("%H:%M:%S", time.gmtime(time.time()-start)) + " Actual data plot saved in " + path +"\n")
     
-    prior_min_all = [50, 3, -10, 0.1, 0.1] 
-    prior_max_all = [200, 75, -3, 6, 8]
+    prior_min_all = [50, 3, -6.5, 0.1, 0.1]
+    prior_max_all = [200, 80, -3, 6, 8]
+    #prior_min_all = [50, 3, -7, 0.1, 0.1] 
+    #prior_max_all = [200, 80, -1, 8, 8]
+    #prior_min_all = [50, 3, -6.5, 0.1, 0.1] 
+    #prior_max_all = [150, 75, -4.5, 18, 8]
+    #prior_min_all = [3, 3, -9, 0.1, 0.1] 
+    #prior_max_all = [40, 60, -4, 40, 20]
     n_simulations=int(argv[0])
     n_samples=10000
     n_reps = int(argv[1])
-    rmse_means_all = np.ndarray([len(all_labels)+1,len(observation_list)])
-    rmse_stderr_all = np.ndarray([len(all_labels)+1,len(observation_list)])
-    train=True
+    train=bool(argv[2])
     
     with open(logpath, 'a') as logfile:
         logfile.write('Priors: \n')
@@ -58,30 +73,50 @@ def main(argv):
         logfile.write('Train: ' + str(train)+ "\n")
         logfile.write(time.strftime("%H:%M:%S", time.gmtime(time.time()-start)) + " Begin inference\n")
     
-    inferred_values, rmse_means, rmse_stderr = run_sbi(path,'all_params',observation_list,n_simulations,n_samples,n_reps,prior_min_all,prior_max_all,all_labels,train=train)
-    inferred_control_values = inferred_values[:,0]
-    print(inferred_control_values)
-    rmse_means_all[0,:] = rmse_means
-    rmse_stderr_all[0,:] = rmse_stderr
+    if len(argv) == 3:
+        inferred_values, rmse_means, rmse_stderr = run_sbi(path,'all_params',observation_list,n_simulations,n_samples,n_reps,prior_min_all,prior_max_all,all_labels,train=train)
+        inferred_control_values = inferred_values[:,0]
+        print(inferred_control_values)
+        
+        with open(logpath, 'a') as logfile:
+            logfile.write(time.strftime("%H:%M:%S", time.gmtime(time.time()-start)) + " Inference completed\n\n")
+            logfile.write('Inferred values: \n')
+            for i, obs in enumerate(observation_list):
+                logfile.write('\n\t' + obs.get('name') + "\n")
+                for j, label in enumerate(all_labels):
+                    logfile.write('\t' + label + ": " + str(inferred_values[j,i])+ "\n")
+            logfile.write('RMSE: \n')
+            for i, obs in enumerate(observation_list):
+                logfile.write('\t' + obs.get('name') + ": " + "{:.2f}".format(rmse_means[i]) + "+/-" + "{:.2f}".format(rmse_stderr[i]) + "\n")
+        results = {}
+        results['inferred_values'] = inferred_values
+        results['rmse_means'] = rmse_means
+        results['rmse_stderr'] = rmse_stderr
+        results['label'] = 'Full Model'
+        results['observation_list'] = observation_list
+        with open(os.path.join(path,'results_' + str(0)+'.pkl'), "wb") as handle:
+            pickle.dump(results,handle)
     
-    with open(logpath, 'a') as logfile:
-        logfile.write(time.strftime("%H:%M:%S", time.gmtime(time.time()-start)) + " Inference completed\n\n")
-        logfile.write('Inferred values: \n')
-        for i, obs in enumerate(observation_list):
-            logfile.write('\n\t' + obs.get('name') + "\n")
-            for j, label in enumerate(all_labels):
-                logfile.write('\t' + label + ": " + str(inferred_values[j,i])+ "\n")
-        logfile.write('RMSE: \n')
-        for i, obs in enumerate(observation_list):
-            logfile.write('\t' + obs.get('name') + ": " + "{:.2f}".format(rmse_means[i]) + "+/-" + "{:.2f}".format(rmse_stderr[i]) + "\n")
-
-    ###ABLATION STUDY###
-    for k, label in enumerate(all_labels):
+    if len(argv) == 4:
+        with open(os.path.join(path,'results_0.pkl'), "rb") as handle:
+            full_model_results = pickle.load(handle)
+        inferred_control_values = full_model_results.get('inferred_values')[:,0]
+        print(inferred_control_values)
+        
+        k = int(argv[3])
+        label = all_labels[k]
         label = label.split('(')[0]
         label = label.strip()
         inferred_values, rmse_means, rmse_stderr = run_sbi(path,'Fix ' + label,observation_list,n_simulations,n_samples,n_reps,prior_min_all,prior_max_all,all_labels,train=train,ablate_index=k,ablate_values=inferred_control_values)
-        rmse_means_all[k+1,:] = rmse_means
-        rmse_stderr_all[k+1,:] = rmse_stderr
+        results = {}
+        results['inferred_values'] = inferred_values
+        results['rmse_means'] = rmse_means
+        results['rmse_stderr'] = rmse_stderr
+        results['label'] = label
+        with open(os.path.join(path,'results_' + str(k+1)+'.pkl'), "wb") as handle:
+            pickle.dump(results,handle)
+        
+        
         labels = copy.deepcopy(all_labels)
         del labels[k]
         
@@ -96,14 +131,7 @@ def main(argv):
             logfile.write('RMSE: \n')
             for i, obs in enumerate(observation_list):
                 logfile.write('\t' + obs.get('name') + ": " + "{:.2f}".format(rmse_means[i]) + " +/- " + "{:.2f}".format(rmse_stderr[i]) + "\n")
-                
-    labels = copy.deepcopy(all_labels)
-    labels = ['Fixed ' + label for label in labels]
-    labels = [label.split('(')[0] for label in labels]
-    labels.insert(0,'Full model')
         
-    bar_plot(rmse_means_all,rmse_stderr_all,observation_list,labels)
-    plt.savefig(os.path.join(path,'bar_plot.png'))
-    
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    #main(sys.argv[1:])
+    main([100000, 10, False])
