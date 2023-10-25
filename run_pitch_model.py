@@ -8,6 +8,7 @@ import configparser
 from model import Model
 import numpy as np
 import plotting
+import torch
 
 def main(argv):
     config = configparser.ConfigParser()
@@ -18,6 +19,7 @@ def main(argv):
     nframes = round(float(config['Experiment']['end_time'])/ts)
     
     model = Model(config)
+    #model.set_tunable_params(torch.tensor([90, 10, -10, 1, 3]))
     
     y_output,errors = model.run()
     make_plots(y_output,errors,model.feedback_alteration.onset,ts)
@@ -33,11 +35,8 @@ def make_plots(y_output,errors,alt_onset,ts):
         baseline = np.mean(pitch_output[:int(np.floor(alt_onset/ts)),:],axis=0) 
     else: baseline = np.mean(pitch_output[:int(np.floor(0.1/ts)),:],axis=0)
     baseline = np.asarray([starting_pitch]*ntrials)
-    plotting.plot_trial_timecourse(t_axis,pitch_output,scale='Hz',baseline=baseline)
+    #plotting.plot_trial_timecourse(t_axis,pitch_output,scale='Hz',baseline=baseline)
     plotting.plot_trial_timecourse(t_axis,pitch_output,scale='cents',baseline=baseline)
-    plotting.plot_adaptation(pitch_output,scale='percent',baseline=starting_pitch,endframe=round(0.1/ts))
-    
-
-    
+    #plotting.plot_adaptation(pitch_output,scale='percent',baseline=starting_pitch,endframe=round(0.1/ts))
     
 main(['pitch_pert_configs.ini'])
