@@ -13,3 +13,4 @@ figs/
 sbi_figures/
 SBI_results*
 *.pdf
+*.sh
