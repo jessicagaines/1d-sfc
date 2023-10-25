@@ -33,7 +33,7 @@ def get_combined_data_jh(path,file):
     for i in range(1,len(means)):
         if np.isinf(means[i]) or np.isnan(means[i]):
             means[i] = means[i-1]
-    return taxis, means, stds, stde
+    return downsample(taxis,300), downsample(means,300), downsample(stds,300), downsample(stde,300)
     
 def get_combined_data_hk(path,file,variable):
     struct = scipy.io.loadmat(path + file, squeeze_me=True,simplify_cells=True).get(variable)
@@ -42,7 +42,7 @@ def get_combined_data_hk(path,file,variable):
     stds = struct.get('std')
     stde = struct.get('stde')
     ntrials = struct.get('ntrials')
-    return taxis, means, stds, stde
+    return downsample(taxis,300), downsample(means,300), downsample(stds,300), downsample(stde,300)
 
 def get_combined_data_kr(path,file):
     taxis = scipy.io.loadmat(path + 'xaxisdata.mat', squeeze_me=True,simplify_cells=True).get('xs')
@@ -54,17 +54,22 @@ def get_combined_data_kr(path,file):
         lower = scipy.io.loadmat(path + file + 'lower.mat', squeeze_me=True,simplify_cells=True).get('lowerp')
     stds = np.zeros((len(means),1))
     stde = means - lower
-    return taxis, means, stds, stde
+    return downsample(taxis,300), downsample(means,300), downsample(stds,300), downsample(stde,300)
 
-def get_combined_data_csv(path,variable):
+def get_combined_data_csv(path,variable,data_length):
     data = pd.read_csv(path+variable+'.csv',header=1,usecols=[0,1], names=['Time','Pitch'])
     data = data.sort_values('Time')
     taxis = np.squeeze(data[['Time']])
     means = np.squeeze(data[['Pitch']])
     stds = [0] * len(taxis)
     stde = [0] * len(taxis)
-    return taxis, means, stds, stde
+    return downsample(taxis,data_length), downsample(means,data_length), downsample(stds,data_length), downsample(stde,data_length)
+
+def get_ind_data_kb(path):
+    struct = scipy.io.loadmat(path + 'pert_resp.mat', squeeze_me=True,simplify_cells=True).get('pert_resp')
+    taxis = struct.get('frame_taxis')
     
+
 def get_ind_data_hk(path,variable):
     struct = scipy.io.loadmat(path + 'centsdev_dat', squeeze_me=True,simplify_cells=True).get('centsdev_dat')
     taxis = struct.get('frame_taxis')
@@ -80,7 +85,7 @@ def get_ind_data_hk(path,variable):
         means[i,:] = subj_mean
         stdvs[i,:] = subj_std
         sterrs[i,:] = subj_stde
-    return taxis, means, stdvs, sterrs
+    return downsample(taxis,300), downsample(means,300), downsample(stdvs,300), downsample(sterrs,300)
 
 ###Downsample data to match simulator output 
 def downsample(array, npts):
@@ -98,18 +103,23 @@ def read_obs(path,condition,read_type,subj_type,color):
         name = condition + " " + subj_type +'s'
         observation['name'] = name
     if read_type == 'jh':
-            taxis, data_means, data_stdv, data_stde = get_combined_data_jh(path,subj_type + '_comb_subj_pertresp')
+        taxis, data_means, data_stdv, data_stde = get_combined_data_jh(path,subj_type + '_comb_subj_pertresp')
+        pert_dur = 0.4
     elif read_type == 'hk':
         taxis, data_means, data_stdv, data_stde = get_combined_data_hk(path,subj_type + '_avgs.mat',subj_type + '_absperttrial')
+        pert_dur = 0.4
     elif read_type == 'kr':
         taxis, data_means, data_stdv, data_stde = get_combined_data_kr(path,condition.lower())
-    elif read_type == 'csv':
-        taxis, data_means, data_stdv, data_stde = get_combined_data_csv(path,subj_type)
-    observation['data'] = downsample(data_means,300)
-    observation['stdv'] = downsample(data_stdv,300)
-    observation['stde'] = downsample(data_stde,300)
-    observation['taxis'] = downsample(taxis,300)
+        pert_dur = 0.4
+    elif read_type == 'thomas2020':
+        taxis, data_means, data_stdv, data_stde = get_combined_data_csv(path,subj_type,175)
+        pert_dur = 0.2
+    observation['data'] = data_means
+    observation['stdv'] = data_stdv
+    observation['stde'] = data_stde
+    observation['taxis'] = taxis
     observation['color'] = color
+    observation['pert_dur'] = pert_dur
     return observation
 
 ### Unused method for reading in data from a single subject    
