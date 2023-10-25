@@ -19,7 +19,7 @@ def find_idx_nearest(array, value):
     return idx
 
 def violin_plots(obs_list,samples,prior_min,prior_max,effect_size_list=None,effect_size_stderr=None,labels=None,conf_int_level=None,show=True):
-    fig, ax = plt.subplots(1,len(prior_min),figsize=(15*len(prior_min)/5,4))
+    fig, ax = plt.subplots(1,len(prior_min),figsize=(20*len(prior_min)/5,4))
     for i in range(len(ax)):
         data_all = pd.DataFrame()
         color_palette = {}
@@ -57,10 +57,19 @@ def violin_plots(obs_list,samples,prior_min,prior_max,effect_size_list=None,effe
         ax[i].tick_params(axis='y',which='major',labelsize=15)
         ax[i].tick_params(axis='x',which='major',labelsize=15)
         ax[i].set_xlabel('')
-        ax[i].set_ylim([prior_min[i]-buffer, prior_max[i]+buffer])
+        ax[i].set_ylim([prior_min[i]-buffer, prior_max[i]+2*buffer])
         ax[i].yaxis.offsetText.set_fontsize(15)
-    ax[0].set_ylabel('Parameter value',fontsize=20)
-    plt.tight_layout()
+    if effect_size_list is not None:
+        plt.subplots_adjust(wspace=0.3)
+        sort_indeces = np.argsort(-effect_size_list)
+        positions = []
+        for x in range(len(labels)):
+            positions.append(ax[x].get_position())
+        for x in range(len(labels)):
+            ax[sort_indeces[x]].set_position(positions[x])
+    else:
+        plt.tight_layout()
+    ax[sort_indeces[0]].set_ylabel('Parameter value',fontsize=20)
     return fig
 
 def glassdelta_effect_size(samples1,samples2):
@@ -94,11 +103,11 @@ def marked_dist_plot(samples, prior_min, prior_max, labels=None, means=None, med
             ax[i,i].axvline(max_likelihood[i].item(),color='orange')
     return fig
 
-def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=[-5,45],legend=False,show_pert=False,alpha=0.5):
+def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=None,legend=False,show_pert=False,alpha=0.5):
     if ax is None:
         fig, ax = plt.subplots()
     if show_pert:
-        ax.axvspan(0,0.4,alpha=0.08,color='gray')
+        ax.axvspan(0,obs_list[0].get('pert_dur'),alpha=0.08,color='gray')
         ax.annotate('Perturbation',(0.01,40),fontsize=14,color='gray')
     for i, obs in enumerate(obs_list):
         ax.plot(obs.get('taxis'),obs.get('data'),label=obs.get('name'),linewidth=5,linestyle=':',color=obs.get('color'),alpha=alpha)
@@ -180,7 +189,7 @@ def sample_posterior(path,subdir,simulator,obs_list,seed,n_samples,labels,plot=T
         fig.savefig(os.path.join(path,subdir,'pitch_plots', 'pitch_plots_' + subdir + '_seed' + str(seed) + '.png'),format='png')
     return all_samples
 
-def plot_actual_inferred_data(simulator, obs_list,max_likelihood_params,name=None,xlabel=False,ylabel=False,ylim=[-5,45],legend=True,title='',figlabel=''):
+def plot_actual_inferred_data(simulator, obs_list,max_likelihood_params,name=None,xlabel=False,ylabel=False,ylim=None,legend=True,title='',figlabel=''):
     ntrials = 100
     rmse_all = np.ndarray((len(obs_list), ntrials))
     fig, ax = plt.subplots()
@@ -216,9 +225,11 @@ def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,pr
         prior_max.pop(ablate_index)
         title = 'Fixed ' + ablated_label.split('(')[0]
         figlabel = ['A','B','C','D','E'][ablate_index]
+        ylim = [-5,45]
     else: 
         title = ''
         figlabel = ''
+        ylim = None
     combined_samples = np.ndarray((n_reps*n_samples,len(labels),len(obs_list)))
     for seed in range(n_reps):
         # train
@@ -242,21 +253,44 @@ def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,pr
     effect_size_stderr = np.std(combined_effect_size,axis=1) / np.sqrt(n_bootstrap)
     if ablate_index is None: simulator = build_simulator(training_noise_scale=0)
     else: simulator = build_simulator(training_noise_scale=0, ablate_values=ablate_values, ablate_index=ablate_index)
-    fig, rmse_mean, rmse_sterr = plot_actual_inferred_data(simulator,obs_list,inferred_values,xlabel=True,ylabel=True,legend=True,title=title,figlabel=figlabel)
+    fig, rmse_mean, rmse_sterr = plot_actual_inferred_data(simulator,obs_list,inferred_values,xlabel=True,ylabel=True,legend=True,title=title,figlabel=figlabel,ylim=ylim)
+    plt.tight_layout()
     fig.savefig(os.path.join(path,subdir,'pitch_plots' + '.png'),format='png')
     fig = violin_plots(obs_list,combined_samples,prior_min,prior_max,effect_size_list=effect_size_list,effect_size_stderr=effect_size_stderr,labels=labels,conf_int_level=0.95,show=True)
     fig.savefig(os.path.join(path,subdir,'violin_plots' + '.png'),format='png')
     return inferred_values, rmse_mean, rmse_sterr
 
-def bar_plot(rmse_means_all,rmse_stdev_all,obs_list,labels):
+def bar_plot(path,all_labels):
+    labels = copy.deepcopy(all_labels)
+    labels = ['Fixed ' + label for label in labels]
+    labels = [label.split('(')[0] for label in labels]
+    labels.insert(0,'Full model')
+    
+    with open(os.path.join(path,'results_' + str(0) + '.pkl'), "rb") as handle:
+        results = pickle.load(handle)
+    obs_list = results.get('observation_list')
+    
+    rmse_means_all = np.ndarray([len(all_labels)+1,len(obs_list)])
+    rmse_stderr_all = np.ndarray([len(all_labels)+1,len(obs_list)])
+    
+    for k,label in enumerate(labels):
+        with open(os.path.join(path,'results_' + str(k) + '.pkl'), "rb") as handle:
+            results = pickle.load(handle)
+        rmse_means_all[k,:] = results.get('rmse_means')
+        rmse_stderr_all[k,:] = results.get('rmse_stderr')
+    
     bar_df = pd.DataFrame(rmse_means_all,columns=[obs_list[0].get('name'),obs_list[1].get('name')])
-    se_df = pd.DataFrame(rmse_stdev_all,columns = [obs_list[0].get('name'),obs_list[1].get('name')])
+    se_df = pd.DataFrame(rmse_stderr_all,columns = [obs_list[0].get('name'),obs_list[1].get('name')])
+    se_df['CA means for sorting'] = bar_df['CA patients']
     bar_df['Labels'] = labels
     se_df['Labels'] = labels
+    bar_df = bar_df.sort_values('CA patients',ascending=False)
+    se_df = se_df.sort_values('CA means for sorting',ascending=False)
     ax = bar_df.plot(kind='bar',yerr=se_df,rot=0,color=[obs_list[0].get('color'),obs_list[1].get('color')],figsize=(5,5))
     ax.set_ylabel('RMSE (cents)',fontsize=12)
     ax.set_xlabel('Reduced model',fontweight='bold',fontsize=12)
-    ax.set_xticks(ticks=range(len(labels)),labels=labels,fontsize=12,rotation=30,ha='right')
+    ax.set_xticks(ticks=range(len(labels)),labels=bar_df["Labels"],fontsize=12,rotation=30,ha='right')
     tick_labels = ax.get_xticklabels()
-    tick_labels[0].set_fontweight('bold')
+    tick_labels[bar_df['Labels'].tolist().index('Full model')].set_fontweight('bold')
     plt.tight_layout()
+    plt.savefig(os.path.join(path,'bar_plot.png'))
