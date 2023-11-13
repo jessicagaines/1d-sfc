@@ -14,3 +14,5 @@ sbi_figures/
 SBI_results*
 *.pdf
 *.sh
+*.ai
+*.tif

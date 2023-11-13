@@ -44,9 +44,9 @@ def main(argv):
     #observation_list.append(read_obs('pitch_pert_data/LD_Data_follow/','LD','hk','patient',"#456990"))
     #observation_list.append(read_obs('pitch_pert_data/LD_Data_oppose/','LD','hk','control',"#C7221F"))
     #observation_list.append(read_obs('pitch_pert_data/LD_Data_oppose/','LD','hk','patient',"#456990"))
-    plot_actual_data(observation_list,xlabel='Time (s)',ylabel='Pitch (cents)',legend=True,show_pert=True,alpha=1,ylim=None)
+    plot_actual_data(observation_list,xlabel='Time (s)',ylabel='Pitch (cents)',legend=True,show_pert=True,ylim=None)
     plt.tight_layout()
-    plt.savefig(os.path.join(path,'actual_data.png'))
+    plt.savefig(os.path.join(path,'actual_data.eps'),format='eps',dpi=600)
     with open(logpath, 'a') as logfile:
         logfile.write(time.strftime("%H:%M:%S", time.gmtime(time.time()-start)) + " Actual data plot saved in " + path +"\n")
     
@@ -87,7 +87,7 @@ def main(argv):
                     logfile.write('\t' + label + ": " + str(inferred_values[j,i])+ "\n")
             logfile.write('RMSE: \n')
             for i, obs in enumerate(observation_list):
-                logfile.write('\t' + obs.get('name') + ": " + "{:.2f}".format(rmse_means[i]) + "+/-" + "{:.2f}".format(rmse_stderr[i]) + "\n")
+                logfile.write('\t' + obs.get('name') + ": " + "{:.4f}".format(rmse_means[i]) + "+/-" + "{:.4f}".format(rmse_stderr[i]) + "\n")
         results = {}
         results['inferred_values'] = inferred_values
         results['rmse_means'] = rmse_means
@@ -130,8 +130,8 @@ def main(argv):
                     logfile.write('\t' + label + ": " + str(inferred_values[j,i])+ "\n")
             logfile.write('RMSE: \n')
             for i, obs in enumerate(observation_list):
-                logfile.write('\t' + obs.get('name') + ": " + "{:.2f}".format(rmse_means[i]) + " +/- " + "{:.2f}".format(rmse_stderr[i]) + "\n")
+                logfile.write('\t' + obs.get('name') + ": " + "{:.4f}".format(rmse_means[i]) + " +/- " + "{:.4f}".format(rmse_stderr[i]) + "\n")
         
 if __name__ == "__main__":
-    #main(sys.argv[1:])
-    main([100000, 10, False])
+    main(sys.argv[1:])
+    #main([100000, 10, False, 2])

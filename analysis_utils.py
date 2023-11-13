@@ -41,21 +41,21 @@ def violin_plots(obs_list,samples,prior_min,prior_max,effect_size_list=None,effe
             data_all = pd.concat([data_all,data_pop])
         sns.violinplot(x='Population',y='data',palette=color_palette,data=data_all, ax=ax[i],orient='v',inner=None)
         if effect_size_stderr is not None:
-            ax[i].annotate("{:.2f}".format(effect_size_list[i]) + ' +/- ' + "{:.2f}".format(effect_size_stderr[i]),(0.17,0.90),xycoords='axes fraction',size=16)
+            ax[i].annotate("{:.2f}".format(effect_size_list[i]) + ' +/- ' + "{:.2f}".format(effect_size_stderr[i]),(0.17,0.90),xycoords='axes fraction',size=18)
         elif effect_size_list is not None:
-            ax[i].annotate(str(round(effect_size_list[i],1)),(0.45,0.90),xycoords='axes fraction',size=20)
+            ax[i].annotate(str(round(effect_size_list[i],1)),(0.45,0.90),xycoords='axes fraction',size=18)
         if conf_int_level:
             for j,obs in enumerate(obs_list):
                 #ax[i].scatter(j,data_list[j].get('max_likelihood')[i],marker='.',color='black',s=500)
-                ax[i].scatter(j,conf_int[j,0],marker='_',color='black',s=300)
+                ax[i].scatter(j,conf_int[j,0],marker='_',color='black',s=400)
                 ax[i].scatter(j,conf_int[j,1],marker='.',color='black',s=500)
-                ax[i].scatter(j,conf_int[j,2],marker='_',color='black',s=300)
-                ax[i].plot([j,j],[conf_int[j,0],conf_int[j,2]],color='black')
+                ax[i].scatter(j,conf_int[j,2],marker='_',color='black',s=400)
+                ax[i].plot([j,j],[conf_int[j,0],conf_int[j,2]],color='black',linewidth=2)
         ax[i].set_ylabel('')
-        if labels: ax[i].set_title(labels[i],fontsize=15)
+        if labels: ax[i].set_title(labels[i],fontsize=20)
         buffer = (prior_max[i] - prior_min[i]) * 0.1
-        ax[i].tick_params(axis='y',which='major',labelsize=15)
-        ax[i].tick_params(axis='x',which='major',labelsize=15)
+        ax[i].tick_params(axis='y',which='major',labelsize=17)
+        ax[i].tick_params(axis='x',which='major',labelsize=17)
         ax[i].set_xlabel('')
         ax[i].set_ylim([prior_min[i]-buffer, prior_max[i]+2*buffer])
         ax[i].yaxis.offsetText.set_fontsize(15)
@@ -69,7 +69,7 @@ def violin_plots(obs_list,samples,prior_min,prior_max,effect_size_list=None,effe
             ax[sort_indeces[x]].set_position(positions[x])
     else:
         plt.tight_layout()
-    ax[sort_indeces[0]].set_ylabel('Parameter value',fontsize=20)
+    ax[sort_indeces[0]].set_ylabel('Parameter value',fontsize=18)
     return fig
 
 def glassdelta_effect_size(samples1,samples2):
@@ -102,33 +102,6 @@ def marked_dist_plot(samples, prior_min, prior_max, labels=None, means=None, med
         if max_likelihood is not None:
             ax[i,i].axvline(max_likelihood[i].item(),color='orange')
     return fig
-
-def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=None,legend=False,show_pert=False,alpha=0.5):
-    if ax is None:
-        fig, ax = plt.subplots()
-    if show_pert:
-        ax.axvspan(0,obs_list[0].get('pert_dur'),alpha=0.08,color='gray')
-        ax.annotate('Perturbation',(0.01,40),fontsize=14,color='gray')
-    for i, obs in enumerate(obs_list):
-        ax.plot(obs.get('taxis'),obs.get('data'),label=obs.get('name'),linewidth=5,linestyle=':',color=obs.get('color'),alpha=alpha)
-        ax.plot(obs.get('taxis'),obs.get('data')+obs.get('stde'),linestyle=':',linewidth=2,color=obs.get('color'),alpha=alpha)
-        ax.plot(obs.get('taxis'),obs.get('data')-obs.get('stde'),linestyle=':',linewidth=2,color=obs.get('color'),alpha=alpha)
-        #plt.fill_between(obs.get('taxis'),
-        #             obs.get('data')+obs.get('stde'),
-        #             obs.get('data')-obs.get('stde'),
-        #             linewidth=5,color='#A3A3A3')
-        if xlabel:
-            ax.set_xlabel('Time (s)',fontsize=18)
-            ax.tick_params(axis='x',which='major',labelsize=16)
-        else: ax.set_xticks([])
-        if ylabel:
-            ax.set_ylabel('Pitch (cents)',fontsize=18)
-            ax.tick_params(axis='y',which='major',labelsize=16)
-        else: ax.set_yticks([])
-        if ylim is not None:
-            ax.set_ylim(ylim)
-        if legend:
-            ax.annotate(obs.get('name'), (0.65, 36+4*i), fontsize=18, color=obs.get('color'))
 
 def build_simulator(training_noise_scale, ablate_values=None, ablate_index=None):
     config = configparser.ConfigParser()
@@ -189,12 +162,39 @@ def sample_posterior(path,subdir,simulator,obs_list,seed,n_samples,labels,plot=T
         fig.savefig(os.path.join(path,subdir,'pitch_plots', 'pitch_plots_' + subdir + '_seed' + str(seed) + '.png'),format='png')
     return all_samples
 
+def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=None,legend=False,show_pert=False):
+    if ax is None:
+        fig, ax = plt.subplots()
+    if show_pert:
+        ax.axvspan(0,obs_list[0].get('pert_dur'),alpha=0.08,color='#C8C8C8')
+        ax.annotate('Perturbation',(0.01,40),fontsize=14,color='#646464')
+    for i, obs in enumerate(obs_list):
+        ax.plot(obs.get('taxis'),obs.get('data'),label=obs.get('name'),linewidth=5,linestyle=':',color=obs.get('color'))
+        ax.plot(obs.get('taxis'),obs.get('data')+obs.get('stde'),linestyle=':',linewidth=2,color=obs.get('color'))
+        ax.plot(obs.get('taxis'),obs.get('data')-obs.get('stde'),linestyle=':',linewidth=2,color=obs.get('color'))
+        #plt.fill_between(obs.get('taxis'),
+        #             obs.get('data')+obs.get('stde'),
+        #             obs.get('data')-obs.get('stde'),
+        #             linewidth=5,color='#A3A3A3')
+        if xlabel:
+            ax.set_xlabel('Time (s)',fontsize=18)
+            ax.tick_params(axis='x',which='major',labelsize=17)
+        else: ax.set_xticks([])
+        if ylabel:
+            ax.set_ylabel('Pitch (cents)',fontsize=18)
+            ax.tick_params(axis='y',which='major',labelsize=17)
+        else: ax.set_yticks([])
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        if legend:
+            ax.annotate(obs.get('name'), (0.65, 36+4*i), fontsize=18, color=obs.get('color'))
+
 def plot_actual_inferred_data(simulator, obs_list,max_likelihood_params,name=None,xlabel=False,ylabel=False,ylim=None,legend=True,title='',figlabel=''):
     ntrials = 100
     rmse_all = np.ndarray((len(obs_list), ntrials))
-    fig, ax = plt.subplots()
-    ax.text(-0.6,20,title,ha='center',va='center',rotation=90,size=24,fontweight='bold')
-    ax.text(-0.7,50,figlabel,ha='center',va='center',size=45)
+    fig, ax = plt.subplots(figsize=(8,3.7))
+    ax.text(-0.6,18,title,ha='center',va='center',rotation=90,size=20,fontweight='bold')
+    ax.text(-0.8,40,figlabel,ha='center',va='center',size=45)
     plot_actual_data(obs_list,ax,xlabel,ylabel,ylim,legend=True)
     for i, obs in enumerate(obs_list):
         plot_color = obs.get('color')
@@ -224,7 +224,7 @@ def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,pr
         prior_min.pop(ablate_index)
         prior_max.pop(ablate_index)
         title = 'Fixed ' + ablated_label.split('(')[0]
-        figlabel = ['A','B','C','D','E'][ablate_index]
+        figlabel = ['C','E','D','A','B'][ablate_index]
         ylim = [-5,45]
     else: 
         title = ''
@@ -253,11 +253,11 @@ def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,pr
     effect_size_stderr = np.std(combined_effect_size,axis=1) / np.sqrt(n_bootstrap)
     if ablate_index is None: simulator = build_simulator(training_noise_scale=0)
     else: simulator = build_simulator(training_noise_scale=0, ablate_values=ablate_values, ablate_index=ablate_index)
-    fig, rmse_mean, rmse_sterr = plot_actual_inferred_data(simulator,obs_list,inferred_values,xlabel=True,ylabel=True,legend=True,title=title,figlabel=figlabel,ylim=ylim)
+    fig, rmse_mean, rmse_sterr = plot_actual_inferred_data(simulator,obs_list,inferred_values,xlabel=False,ylabel=True,legend=True,title=title,figlabel=figlabel,ylim=ylim)
     plt.tight_layout()
-    fig.savefig(os.path.join(path,subdir,'pitch_plots' + '.png'),format='png')
+    fig.savefig(os.path.join(path,subdir,'pitch_plots' + '.eps'),format='eps',dpi=600)
     fig = violin_plots(obs_list,combined_samples,prior_min,prior_max,effect_size_list=effect_size_list,effect_size_stderr=effect_size_stderr,labels=labels,conf_int_level=0.95,show=True)
-    fig.savefig(os.path.join(path,subdir,'violin_plots' + '.png'),format='png')
+    fig.savefig(os.path.join(path,subdir,'violin_plots' + '.eps'),format='eps',dpi=600)
     return inferred_values, rmse_mean, rmse_sterr
 
 def bar_plot(path,all_labels):
@@ -293,4 +293,12 @@ def bar_plot(path,all_labels):
     tick_labels = ax.get_xticklabels()
     tick_labels[bar_df['Labels'].tolist().index('Full model')].set_fontweight('bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(path,'bar_plot.png'))
+    plt.savefig(os.path.join(path,'bar_plot.eps'),format='eps',dpi=600)
+
+
+bar_plot(path = os.path.join(os.getcwd(),'SBI_results'), all_labels = ['Aud Delay (ms)',
+          'Somat Delay (ms)',
+          'Fb Noise Var (log)',
+          'Fb Noise Ratio (Aud:Som)',
+          'Controller Gain',
+          ])
