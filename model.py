@@ -46,6 +46,32 @@ class Model():
         return y_output,errors
         
     def set_tunable_params(self,parameter_set):
-        self.plant = VocalTract(self.config['Vocal_Tract'],self.ts,arn=10**parameter_set[2].item(),srn=10**parameter_set[2].item()/parameter_set[3].item())
+        self.plant = VocalTract(self.config['Vocal_Tract'],self.ts,arn=10**parameter_set[2].item(),srn=(10**parameter_set[2].item())/parameter_set[3].item())
         self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0].item(),som_delay=parameter_set[1].item())
         self.controller.ugain = parameter_set[4].item()
+        
+    def set_tunable_params_noise_est(self,parameter_set):
+        self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0].item(),som_delay=parameter_set[1].item(), 
+                                                  estimated_arn=10**parameter_set[2].item(), estimated_srn=(10**parameter_set[2].item())/parameter_set[3].item())
+        self.controller.ugain = parameter_set[4].item()
+        
+    def set_tunable_params_list(self,parameter_set):
+        self.plant = VocalTract(self.config['Vocal_Tract'],self.ts,arn=10**parameter_set[2],srn=10**parameter_set[2]/parameter_set[3])
+        self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0],som_delay=parameter_set[1])
+        self.controller.ugain = parameter_set[4]
+        
+    def set_tunable_params_noise_est_list(self,parameter_set):
+        self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0],som_delay=parameter_set[1], 
+                                                  estimated_arn=10**parameter_set[2], estimated_srn=(10**parameter_set[2])/parameter_set[3])
+        self.controller.ugain = parameter_set[4]
+        
+    def set_tunable_params_sa_est_list(self,parameter_set):
+        self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0],som_delay=parameter_set[1], 
+                                                  estimated_arn=parameter_set[2], estimated_srn=parameter_set[3])
+        self.controller.ugain = parameter_set[4]
+        
+    def set_tunable_params_sa_list(self,parameter_set):
+        self.plant = VocalTract(self.config['Vocal_Tract'],self.ts,arn=parameter_set[2],srn=parameter_set[3])
+        self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0],som_delay=parameter_set[1])
+        self.controller.ugain = parameter_set[4]
+        

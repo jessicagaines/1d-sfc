@@ -20,7 +20,7 @@ def ControlLawFactory(controller_config,plant):
         controller = ControlLaw(controller_config,plant)
     return controller
 
-def ObserverFactory(observer_config,plant,ts,aud_delay=None,som_delay=None):
+def ObserverFactory(observer_config,plant,ts,aud_delay=None,som_delay=None,estimated_arn=None,estimated_srn=None):
     observer = None
     if 'adaptation_type' in observer_config:
         if observer_config['adaptation_type'] == 'prediction':
@@ -30,13 +30,13 @@ def ObserverFactory(observer_config,plant,ts,aud_delay=None,som_delay=None):
         elif observer_config['adaptation_type'] == 'matlab':
             observer = AdaptiveObserverFeedback(observer_config,plant,ts,aud_delay,som_delay)
         else: print('Unrecognized observer type')
-    if 'fixed_kalman_gain' in observer_config:
-        if observer_config['fixed_kalman_gain'] == 'fixed':
-            observer = ObserverFixed(observer_config,plant,ts,aud_delay,som_delay)
-        if observer_config['fixed_kalman_gain'] == 'unfixed':
-            observer = ObserverUnfixed(observer_config,plant,ts,aud_delay,som_delay)
-    else: 
-        observer = Observer(observer_config,plant,ts,aud_delay,som_delay)
+    #if 'fixed_kalman_gain' in observer_config:
+    #    if observer_config['fixed_kalman_gain'] == 'fixed':
+    #        observer = ObserverFixed(observer_config,plant,ts,aud_delay,som_delay)
+    #    if observer_config['fixed_kalman_gain'] == 'unfixed':
+    #        observer = ObserverUnfixed(observer_config,plant,ts,aud_delay,som_delay)
+    #else: 
+    observer = Observer(observer_config,plant,ts,aud_delay,som_delay,estimated_arn,estimated_srn)
     return observer
 
 def TargetFactory(target_config,plant):

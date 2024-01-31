@@ -10,7 +10,7 @@ import numpy as np
 import control.matlab as ctrl
 
 class Observer():
-    def __init__(self,observer_params, plant, ts,aud_delay=None,som_delay=None):
+    def __init__(self,observer_params, plant, ts,aud_delay=None,som_delay=None, estimated_arn=None, estimated_srn=None):
         kalfact_base = float(observer_params['kalfact_base'])
         kalfact_balance = string2dtype_array(observer_params['kalfact_balance'],'float')
         if aud_delay is None: self.aud_fdbk_delay = float(observer_params['aud_fdbk_delay'])
@@ -24,8 +24,14 @@ class Observer():
         self.somat_fdbk_buffer = deque(maxlen=round(self.somat_fdbk_delay/1000/self.ts))
         self.aud_pred_buffer = deque(maxlen=round(self.aud_fdbk_delay/1000/self.ts))
         self.somat_pred_buffer = deque(maxlen=round(self.somat_fdbk_delay/1000/self.ts))
-        [X,L,G] = ctrl.dare(self.plant.sysd.A.T,self.plant.sysd.C.T,self.plant.Q,self.plant.R)
-        kal_gain = X*plant.sysd.C.T * np.linalg.inv(self.plant.R + self.plant.sysd.C * X * self.plant.sysd.C.T)
+        if estimated_arn is not None and estimated_srn is not None:
+            R = np.diagflat([estimated_arn, estimated_srn])
+        elif 'estimated_arn' in observer_params.keys() and 'estimated_srn' in observer_params.keys():
+            R = np.diagflat([float(observer_params['estimated_arn']),float(observer_params['estimated_srn'])])
+        else:
+            R = self.plant.R
+        [X,L,G] = ctrl.dare(self.plant.sysd.A.T,self.plant.sysd.C.T,self.plant.Q,R)
+        kal_gain = X*plant.sysd.C.T * np.linalg.inv(R + self.plant.sysd.C * X * self.plant.sysd.C.T)
         self.kal_gain_scaled = np.multiply(self.Kalfact,kal_gain)
         
     def run(self, x_est,uprev,y_alt):

@@ -123,9 +123,9 @@ def simulator_configurable(parameter_set, model, training_noise_scale, ablate_va
     return pitch_output_cents_wnoise
 
 def sbi_train(path,subdir,simulator,prior_min,prior_max,seed,n_simulations):
-    prior = utils.torchutils.BoxUniform(low=torch.as_tensor(prior_min), high=torch.as_tensor(prior_max))
     np.random.seed(seed)
     torch.manual_seed(seed)
+    prior = utils.torchutils.BoxUniform(low=torch.as_tensor(prior_min), high=torch.as_tensor(prior_max))
     posterior = infer(simulator,prior,method='SNPE', num_simulations=n_simulations, num_workers=4)
     posterior_save = {'prior_min':prior_min,'prior_max':prior_max,'posterior':posterior,'seed':seed}
     if not os.path.exists(os.path.join(path,subdir,'posterior')): 
@@ -253,14 +253,16 @@ def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,pr
     effect_size_stderr = np.std(combined_effect_size,axis=1) / np.sqrt(n_bootstrap)
     if ablate_index is None: simulator = build_simulator(training_noise_scale=0)
     else: simulator = build_simulator(training_noise_scale=0, ablate_values=ablate_values, ablate_index=ablate_index)
-    fig, rmse_mean, rmse_sterr = plot_actual_inferred_data(simulator,obs_list,inferred_values,xlabel=False,ylabel=True,legend=True,title=title,figlabel=figlabel,ylim=ylim)
+    fig, rmse_mean, rmse_sterr = plot_actual_inferred_data(simulator,obs_list,inferred_values,xlabel=True,ylabel=True,legend=True,title=title,figlabel=figlabel,ylim=ylim)
     plt.tight_layout()
     fig.savefig(os.path.join(path,subdir,'pitch_plots' + '.eps'),format='eps',dpi=600)
+    #fig.savefig(os.path.join(path,subdir,'pitch_plots' + '.png'),format='png')
     fig = violin_plots(obs_list,combined_samples,prior_min,prior_max,effect_size_list=effect_size_list,effect_size_stderr=effect_size_stderr,labels=labels,conf_int_level=0.95,show=True)
     fig.savefig(os.path.join(path,subdir,'violin_plots' + '.eps'),format='eps',dpi=600)
+    #fig.savefig(os.path.join(path,subdir,'violin_plots' + '.png'),format='png')
     return inferred_values, rmse_mean, rmse_sterr
 
-def bar_plot(path,all_labels):
+def bar_plot(path,all_labels,additional_bars=[],filename='bar_plot.eps'):
     labels = copy.deepcopy(all_labels)
     labels = ['Fixed ' + label for label in labels]
     labels = [label.split('(')[0] for label in labels]
@@ -270,14 +272,22 @@ def bar_plot(path,all_labels):
         results = pickle.load(handle)
     obs_list = results.get('observation_list')
     
-    rmse_means_all = np.ndarray([len(all_labels)+1,len(obs_list)])
-    rmse_stderr_all = np.ndarray([len(all_labels)+1,len(obs_list)])
+    rmse_means_all = np.ndarray([len(all_labels)+len(additional_bars)+1,len(obs_list)])
+    rmse_stderr_all = np.ndarray([len(all_labels)+len(additional_bars)+1,len(obs_list)])
     
     for k,label in enumerate(labels):
         with open(os.path.join(path,'results_' + str(k) + '.pkl'), "rb") as handle:
             results = pickle.load(handle)
         rmse_means_all[k,:] = results.get('rmse_means')
         rmse_stderr_all[k,:] = results.get('rmse_stderr')
+    
+    for m,add in enumerate(additional_bars):
+        labels.insert(k+m+1, add.get('label'))
+        with open(os.path.join(add.get('path'),'results_' + str(0) + '.pkl'), "rb") as handle:
+            results = pickle.load(handle)
+        rmse_means_all[k+m+1,:] = results.get('rmse_means')
+        rmse_stderr_all[k+m+1,:] = results.get('rmse_stderr')
+        
     
     bar_df = pd.DataFrame(rmse_means_all,columns=[obs_list[0].get('name'),obs_list[1].get('name')])
     se_df = pd.DataFrame(rmse_stderr_all,columns = [obs_list[0].get('name'),obs_list[1].get('name')])
@@ -293,12 +303,22 @@ def bar_plot(path,all_labels):
     tick_labels = ax.get_xticklabels()
     tick_labels[bar_df['Labels'].tolist().index('Full model')].set_fontweight('bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(path,'bar_plot.eps'),format='eps',dpi=600)
+    plt.savefig(os.path.join(path,filename),format='eps',dpi=600)
 
 
-bar_plot(path = os.path.join(os.getcwd(),'SBI_results'), all_labels = ['Aud Delay (ms)',
+bar_plot(path = os.path.join(os.getcwd(),'SBI_results_CA'), all_labels = ['Aud Delay (ms)',
           'Somat Delay (ms)',
           'Fb Noise Var (log)',
           'Fb Noise Ratio (Aud:Som)',
           'Controller Gain',
           ])
+
+bar_plot(path = os.path.join(os.getcwd(),'SBI_results_CA'), all_labels = ['Aud Delay (ms)',
+          'Somat Delay (ms)',
+          'Fb Noise Var (log)',
+          'Fb Noise Ratio (Aud:Som)',
+          'Controller Gain',
+          ],
+         additional_bars=[{'label': '*Fixed Obs Est of Noise', 'path': os.path.join(os.getcwd(),'SBI_results_fixed_est')}
+                          ,{'label': '*Fixed Actual Noise Only', 'path': os.path.join(os.getcwd(),'SBI_results_fixed_actual')}],
+         filename='supplementary_bar_plot.eps')

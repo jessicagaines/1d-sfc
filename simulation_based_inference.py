@@ -14,6 +14,7 @@ import os
 import copy
 import sys
 import pickle
+import torch
 
 
 def main(argv):
@@ -44,6 +45,8 @@ def main(argv):
     #observation_list.append(read_obs('pitch_pert_data/LD_Data_follow/','LD','hk','patient',"#456990"))
     #observation_list.append(read_obs('pitch_pert_data/LD_Data_oppose/','LD','hk','control',"#C7221F"))
     #observation_list.append(read_obs('pitch_pert_data/LD_Data_oppose/','LD','hk','patient',"#456990"))
+    print(max(observation_list[0].get('data'))-min(observation_list[0].get('data')))
+    print(max(observation_list[1].get('data'))-min(observation_list[1].get('data')))
     plot_actual_data(observation_list,xlabel='Time (s)',ylabel='Pitch (cents)',legend=True,show_pert=True,ylim=None)
     plt.tight_layout()
     plt.savefig(os.path.join(path,'actual_data.eps'),format='eps',dpi=600)
@@ -58,6 +61,17 @@ def main(argv):
     #prior_max_all = [150, 75, -4.5, 18, 8]
     #prior_min_all = [3, 3, -9, 0.1, 0.1] 
     #prior_max_all = [40, 60, -4, 40, 20]
+    
+    #prior_min_all = [3, 3, -5, 0.1, 0.1, -10]
+    #prior_max_all = [200, 120, -3, 18, 10, -6.7]
+    
+    #prior_min_all = [3, 3, -4.1, 0.1, 0.1, -10]
+    #prior_max_all = [200, 60, -1, 20, 8, -7.2]
+    
+    #prior_min_all = [3, 3, -6.1, 0.1, 0.1]
+    #prior_max_all = [200, 40, -1, 23, 20]
+    
+    
     n_simulations=int(argv[0])
     n_samples=10000
     n_reps = int(argv[1])
@@ -134,4 +148,4 @@ def main(argv):
         
 if __name__ == "__main__":
     main(sys.argv[1:])
-    #main([100000, 10, False, 2])
+    #main([100000, 10, False])
