@@ -16,3 +16,5 @@ SBI_results*
 *.sh
 *.ai
 *.tif
+*.jpg
+*.eps
