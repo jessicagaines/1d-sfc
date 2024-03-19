@@ -6,7 +6,7 @@ Created on Wed Sep  6 11:06:39 2023
 """
 
 import numpy as np
-from data_read import read_obs
+from data_read_util import read_obs
 import time
 from analysis_utils import plot_actual_data, run_sbi, bar_plot
 import matplotlib.pyplot as plt
@@ -49,7 +49,6 @@ def main(argv):
     
     prior_min_all = [50, 3, -6.5, 0.1, 0.1]
     prior_max_all = [200, 80, -3, 6, 8]
-    
     
     n_simulations=int(argv[0])
     n_samples=10000
