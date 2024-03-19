@@ -19,7 +19,7 @@ import torch
 
 def main(argv):
     start = time.time()
-    path = os.path.join(os.getcwd(),'SBI_results')
+    path = os.path.join(os.getcwd(),'SBI_results_final_for_paper')
     if not os.path.exists(path): os.mkdir(path)
     logpath = os.path.join(path,'log' + time.strftime("%Y%m%d%H%M%S", time.localtime(start)) + '.txt')
     
@@ -37,15 +37,9 @@ def main(argv):
         
     observation_list.append(read_obs('pitch_pert_data/CA_Data/','CA','jh','control',"#C7221F"))
     observation_list.append(read_obs('pitch_pert_data/CA_Data/','CA','jh','patient',"#456990"))
-    #observation_list.append(read_obs('pitch_pert_data/LD_Data/','LD','hk','control',"#C7221F"))
-    #observation_list.append(read_obs('pitch_pert_data/LD_Data/','LD','hk','patient',"#456990"))
-    #observation_list.append(read_obs('pitch_pert_data/LD_Data_Thomas2020/','LD','thomas2020','control',"#C7221F"))
-    #observation_list.append(read_obs('pitch_pert_data/LD_Data_Thomas2020/','LD','thomas2020','patient',"#456990"))
-    #observation_list.append(read_obs('pitch_pert_data/LD_Data_follow/','LD','hk','control',"#C7221F"))
-    #observation_list.append(read_obs('pitch_pert_data/LD_Data_follow/','LD','hk','patient',"#456990"))
-    #observation_list.append(read_obs('pitch_pert_data/LD_Data_oppose/','LD','hk','control',"#C7221F"))
-    #observation_list.append(read_obs('pitch_pert_data/LD_Data_oppose/','LD','hk','patient',"#456990"))
+    print('Range of data set 1 in cents')
     print(max(observation_list[0].get('data'))-min(observation_list[0].get('data')))
+    print('Range of data set 2 in cents')
     print(max(observation_list[1].get('data'))-min(observation_list[1].get('data')))
     plot_actual_data(observation_list,xlabel='Time (s)',ylabel='Pitch (cents)',legend=True,show_pert=True,ylim=None)
     plt.tight_layout()
@@ -55,21 +49,6 @@ def main(argv):
     
     prior_min_all = [50, 3, -6.5, 0.1, 0.1]
     prior_max_all = [200, 80, -3, 6, 8]
-    #prior_min_all = [50, 3, -7, 0.1, 0.1] 
-    #prior_max_all = [200, 80, -1, 8, 8]
-    #prior_min_all = [50, 3, -6.5, 0.1, 0.1] 
-    #prior_max_all = [150, 75, -4.5, 18, 8]
-    #prior_min_all = [3, 3, -9, 0.1, 0.1] 
-    #prior_max_all = [40, 60, -4, 40, 20]
-    
-    #prior_min_all = [3, 3, -5, 0.1, 0.1, -10]
-    #prior_max_all = [200, 120, -3, 18, 10, -6.7]
-    
-    #prior_min_all = [3, 3, -4.1, 0.1, 0.1, -10]
-    #prior_max_all = [200, 60, -1, 20, 8, -7.2]
-    
-    #prior_min_all = [3, 3, -6.1, 0.1, 0.1]
-    #prior_max_all = [200, 40, -1, 23, 20]
     
     
     n_simulations=int(argv[0])
@@ -148,4 +127,3 @@ def main(argv):
         
 if __name__ == "__main__":
     main(sys.argv[1:])
-    #main([100000, 10, False])

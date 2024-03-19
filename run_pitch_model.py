@@ -17,9 +17,9 @@ def main(argv):
     ntrials = int(config['Experiment']['n_trials'])
     nframes = round(float(config['Experiment']['end_time'])/ts)
     model = Model(config)
-    #model.set_tunable_params_list([59, 57, -4.65, 11, 2.9, 0.0000000005])
-    #model.set_tunable_params_list([121.1, 25.9, -5.5, 15.6, 7.8,-8.12])
-    model.set_tunable_params_noise_est_list([102.7, 35.3, -5.8, 3.0, 1.9])
+    #model.set_tunable_params_list([102.7, 35.3, -5, 2.0, 1.9])
+    #print(model.observer.kal_gain_scaled)
+    #print(model.plant.R)
     y_output,errors = model.run()
     make_plots(y_output,errors,model.feedback_alteration.onset,ts)
 
@@ -38,4 +38,4 @@ def make_plots(y_output,errors,alt_onset,ts):
     plotting.plot_trial_timecourse(t_axis,pitch_output,scale='cents',baseline=baseline)
     #plotting.plot_adaptation(pitch_output,scale='percent',baseline=starting_pitch,endframe=round(0.1/ts))
     
-main(['pitch_pert_configs_w_est.ini'])
+main(['pitch_pert_configs.ini'])

@@ -2,9 +2,9 @@
 
 This code implements in Python a one-dimensional state feedback control model as 
 described in Houde & Nagarajan (2011) and implemented in Matlab in
-Houde et al. (2014). Also included is a Jupyter notebook to fit the 
+Houde et al. (2014). Also included is a script to fit the 
 SFC model to empirical pitch perturbation data using the SBI package 
-(Cranmer et al., 2020; Tejero-Cantero et al., 2020; https://www.mackelab.org/sbi/)
+(Cranmer et al., 2020; Tejero-Cantero et al., 2020; https://sbi-dev.github.io/sbi/)
 
 1. Create the virtual environment:
 
@@ -15,7 +15,7 @@ conda env create -f environment.yml
 2. Activate the virtual environment:
 
 ```
-conda activate pitch_model_env
+conda activate 1d_sfc_env
 ```
 
 3. Run a single trial:
@@ -23,14 +23,30 @@ conda activate pitch_model_env
 ```
 python run_pitch_model.py [config file]
 ```
+Automatically set the observer's noise estimate to the value of feedback noise in the plant
 ```
-python run_pitch_model.py pitch_pert_configs.ini
+python run_pitch_model.py pitch_pert_configs.ini 
+```
+Independently vary the observer's noise estimate and the value of feedback noise in the plant
+```
+python run_pitch_model.py pitch_pert_configs_w_est.ini 
 ```
 
 4. Fit model to data using SBI
 ```
-jupyter notebook
-simulation-based-inference.ipynb
+python simulation-based-inference.py [int # training simulations] [int # repetitions of training] [boolean generate new training data?] [int index of parameter to ablate if any]
+```
+Run 10 repetitions of the inference procedure and store the posterior functions as .pkl files
+```
+python simulation-based-inference.py 100000 10 True
+```
+Use previously stored posterior functions from 10 repetitions -- rerun sampling only
+```
+python simulation-based-inference.py 100000 10 False
+```
+Ablate parameter 3 (indexing starts at 0) and run inference procedure. Fix parameter 3 at the inferred value for the first data set from the full model (therefore the inference procedure must be run for the full model first before running ablations)
+```
+python simulation-based-inference.py 100000 10 True 3
 ```
 
 References
