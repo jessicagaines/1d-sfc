@@ -164,7 +164,7 @@ def sample_posterior(path,subdir,simulator,obs_list,seed,n_samples,labels,plot=T
 
 def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=None,legend=False,show_pert=False):
     if ax is None:
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(8,5))
     if show_pert:
         ax.axvspan(0,obs_list[0].get('pert_dur'),alpha=0.08,color='#C8C8C8')
         ax.annotate('Perturbation',(0.01,40),fontsize=14,color='#646464')
@@ -192,7 +192,8 @@ def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=None,legend
 def plot_actual_inferred_data(simulator, obs_list,max_likelihood_params,name=None,xlabel=False,ylabel=False,ylim=None,legend=True,title='',figlabel=''):
     ntrials = 100
     rmse_all = np.ndarray((len(obs_list), ntrials))
-    fig, ax = plt.subplots(figsize=(8,3.7))
+    #fig, ax = plt.subplots(figsize=(8,3.7))
+    fig, ax = plt.subplots(figsize=(8,5))
     ax.text(-0.6,18,title,ha='center',va='center',rotation=90,size=20,fontweight='bold')
     ax.text(-0.8,40,figlabel,ha='center',va='center',size=45)
     plot_actual_data(obs_list,ax,xlabel,ylabel,ylim,legend=True)
@@ -306,14 +307,14 @@ def bar_plot(path,all_labels,additional_bars=[],filename='bar_plot.eps'):
     plt.savefig(os.path.join(path,filename),format='eps',dpi=600)
 
 
-bar_plot(path = os.path.join(os.getcwd(),'SBI_results_CA'), all_labels = ['Aud Delay (ms)',
+bar_plot(path = os.path.join(os.getcwd(),'SBI_results_final_for_paper'), all_labels = ['Aud Delay (ms)',
           'Somat Delay (ms)',
           'Fb Noise Var (log)',
           'Fb Noise Ratio (Aud:Som)',
           'Controller Gain',
           ])
 
-bar_plot(path = os.path.join(os.getcwd(),'SBI_results_CA'), all_labels = ['Aud Delay (ms)',
+bar_plot(path = os.path.join(os.getcwd(),'SBI_results_final_for_paper'), all_labels = ['Aud Delay (ms)',
           'Somat Delay (ms)',
           'Fb Noise Var (log)',
           'Fb Noise Ratio (Aud:Som)',
