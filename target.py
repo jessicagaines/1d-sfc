@@ -2,9 +2,15 @@
 """
 Created on Thu Sep  2 22:11:18 2021
 
-@author: Jessica
+@author: John Houde, Jessica Gaines
 """
 import numpy as np
+
+'''
+Defines target F0 from config file
+X is state target
+Y is sensory feedback target
+'''
 
 class Target():
     def __init__(self,target_config,plant):
@@ -21,16 +27,3 @@ class Target():
     
     def get_ytarg(self):
         return self.y_targ
-    
-    def adapt(self,offset,alteration):
-        return 0
-    
-class AdaptiveTarget(Target):
-    def adapt(self,bias,alteration):
-        self.x_targ[1] = self.target_alpha/self.C[0,1] * (self.y_targ[0] - bias[0]) + (1-self.target_alpha)/self.C[1,1] * (self.y_targ[1] - bias[1])
-        
-class AdaptiveTargetSimple(Target):
-    def adapt(self,offset,err):
-        self.target_pitch = self.target_pitch - 0.1 * err
-        new_target_state = (1/self.C[0,1])*self.target_pitch
-        self.x_targ[0] = new_target_state

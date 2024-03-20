@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+@author: Jessica Gaines
+
+A number of utility functions used for analysis
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -12,12 +19,22 @@ from scipy.stats import gaussian_kde
 import copy
 import os
 import pickle
-    
+
+'''
+Find the index within an array of the element closest to a given value
+Modified from https://stackoverflow.com/questions/2566412/find-nearest-value-in-numpy-array
+'''    
 def find_idx_nearest(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return idx
 
+'''
+Produce violin plots of posterior distributions across each parameter in subplots.
+Mark the median of each distribution and the Bayesian credible interval.
+Print the effect size between groups on each plot.
+
+'''
 def violin_plots(obs_list,samples,prior_min,prior_max,effect_size_list=None,effect_size_stderr=None,labels=None,conf_int_level=None,show=True):
     fig, ax = plt.subplots(1,len(prior_min),figsize=(20*len(prior_min)/5,4))
     for i in range(len(ax)):
@@ -72,19 +89,31 @@ def violin_plots(obs_list,samples,prior_min,prior_max,effect_size_list=None,effe
     ax[sort_indeces[0]].set_ylabel('Parameter value',fontsize=18)
     return fig
 
+'''
+Calculate the glass delta effect size between two parameter distributions
+'''
 def glassdelta_effect_size(samples1,samples2):
     mean1 = np.mean(samples1,axis=0)
     mean2 = np.mean(samples2,axis=0)
     var1 = np.var(samples1,axis=0)
     glassdelta = np.abs((mean1-mean2)/np.sqrt(var1))
     return glassdelta
-    
+
+'''
+Calculate the root mean square error between two data sets
+'''    
 def rmse(array1,array2):
     return np.sqrt(rss(array1,array2)/len(array1))
     
+'''
+Calculate the residual sum of squares between two data sets (helper function for rmse)
+'''
 def rss(array1,array2):
     return np.sum((array1 - array2)**2)
-    
+   
+'''
+Plot posterior parameter distributions with vertical lines marking mean, median, mode, joint max likelihood, and/or ground truth if available.
+''' 
 def marked_dist_plot(samples, prior_min, prior_max, labels=None, means=None, medians=None, modes=None, max_likelihood=None,actual_params=None,name=''):
     fig,ax = analysis.pairplot(samples, limits=np.array(list(zip(prior_min,prior_max))), figsize=(24,6))
     fontsize = 24
@@ -103,12 +132,20 @@ def marked_dist_plot(samples, prior_min, prior_max, labels=None, means=None, med
             ax[i,i].axvline(max_likelihood[i].item(),color='orange')
     return fig
 
+'''
+Apply configurations to the configurable simulator to dynamically obtain a simulator 
+function with one input (parameter set)
+Returns: simulator function with desired settings
+'''
 def build_simulator(training_noise_scale, ablate_values=None, ablate_index=None):
     config = configparser.ConfigParser()
     config.read('pitch_pert_configs.ini')
     default_model = Model(config)
     return lambda parameter_set: simulator_configurable(parameter_set, default_model, training_noise_scale, ablate_values, ablate_index)
 
+'''
+Simulator function that can be configured to ablate parameters or use different training noise
+'''
 def simulator_configurable(parameter_set, model, training_noise_scale, ablate_values, ablate_index):
     if ablate_values is not None and ablate_index is not None:
         parameter_set_new = np.insert(parameter_set,ablate_index,ablate_values[ablate_index])
@@ -122,6 +159,10 @@ def simulator_configurable(parameter_set, model, training_noise_scale, ablate_va
     pitch_output_cents_wnoise = pitch_output_cents + ((np.random.rand(len(pitch_output_cents)) - 0.5) * training_noise_scale)
     return pitch_output_cents_wnoise
 
+'''
+Helper function for run_sbi -- based on the input of the priors for each parameter, 
+trains the neural density estimator and stores the posterior in a pickle file
+'''
 def sbi_train(path,subdir,simulator,prior_min,prior_max,seed,n_simulations):
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -132,7 +173,13 @@ def sbi_train(path,subdir,simulator,prior_min,prior_max,seed,n_simulations):
         os.mkdir(os.path.join(path,subdir,'posterior'))
     with open(os.path.join(path,subdir,'posterior','seed' + str(seed) + '.pkl'), "wb") as handle:
         pickle.dump(posterior_save,handle)
-    
+
+'''
+Helper function for run_sbi -- loads the posterior function and samples it based 
+on each empirical observation
+Saves a plot of each posterior distribution and the resulting simulator output if 
+the median of each distribution is used in the simulator
+'''    
 def sample_posterior(path,subdir,simulator,obs_list,seed,n_samples,labels,plot=True):
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -162,6 +209,9 @@ def sample_posterior(path,subdir,simulator,obs_list,seed,n_samples,labels,plot=T
         fig.savefig(os.path.join(path,subdir,'pitch_plots', 'pitch_plots_' + subdir + '_seed' + str(seed) + '.png'),format='png')
     return all_samples
 
+'''
+Plot empirical data only
+'''
 def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=None,legend=False,show_pert=False):
     if ax is None:
         fig, ax = plt.subplots(figsize=(8,5))
@@ -189,6 +239,9 @@ def plot_actual_data(obs_list,ax=None,xlabel=False,ylabel=False,ylim=None,legend
         if legend:
             ax.annotate(obs.get('name'), (0.65, 36+4*i), fontsize=18, color=obs.get('color'))
 
+'''
+Plot inferred simulator output overlaid with empirical data
+'''
 def plot_actual_inferred_data(simulator, obs_list,max_likelihood_params,name=None,xlabel=False,ylabel=False,ylim=None,legend=True,title='',figlabel=''):
     ntrials = 100
     rmse_all = np.ndarray((len(obs_list), ntrials))
@@ -215,6 +268,11 @@ def plot_actual_inferred_data(simulator, obs_list,max_likelihood_params,name=Non
     rmse_sterr = np.std(rmse_all,axis=1) / np.sqrt(ntrials)
     return fig, rmse_mean, rmse_sterr
 
+'''
+Run all SBI procedures. Train neural density estimator if indicated. Sample 
+posterior based on empirical observations. Bootstrap across multiple training
+repetitions to create pooled distributions. 
+'''
 def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,prior_max_all,all_labels,train=True,ablate_index=None,ablate_values=None,verbose=True):
     if not os.path.exists(os.path.join(path,subdir)): os.mkdir(os.path.join(path,subdir))
     labels = copy.deepcopy(all_labels)
@@ -263,6 +321,10 @@ def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,pr
     #fig.savefig(os.path.join(path,subdir,'violin_plots' + '.png'),format='png')
     return inferred_values, rmse_mean, rmse_sterr
 
+'''
+Plot ablation study results: root mean square error from empirical data for 
+the full model and each reduced model
+'''
 def bar_plot(path,all_labels,additional_bars=[],filename='bar_plot.eps'):
     labels = copy.deepcopy(all_labels)
     labels = ['Fixed ' + label for label in labels]

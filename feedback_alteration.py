@@ -2,10 +2,13 @@
 """
 Created on Tue Jul 27 14:11:17 2021
 
-@author: JLG
+@author: John Houde, Jessica Gaines
 """
 import numpy as np
 
+'''
+Defines the alteration of sensory feedback to model behavioral altered-feedback experiments
+'''
 class FeedbackAlteration():
     def __init__(self,alteration_params,nframes,ts,baseline):
         alt_type = alteration_params['type']
@@ -19,6 +22,7 @@ class FeedbackAlteration():
             offset_idx = round((self.onset+duration)/ts)
             alt_vec[0,onset_idx:offset_idx] = hertz_pert
             self.alt_vec = alt_vec
+            
     def run(self,y,iframe):
         alt_y = y + self.alt_vec[:,iframe].reshape((2,1))
         return alt_y

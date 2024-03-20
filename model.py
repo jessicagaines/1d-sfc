@@ -2,14 +2,18 @@
 """
 Created on Wed Sep 22 12:37:32 2021
 
-@author: Jessica
+@author: Jessica Gaines
 """
 from plant import VocalTract
 from feedback_alteration import FeedbackAlteration
 import factories
 import numpy as np
 
-
+'''
+Dynamically create state feedback control model composed of a plant,
+target, feedback alteration, observer, and controller. Run one frame of the 
+composed model.
+'''
 class Model():
     def __init__(self, config):
         self.config = config
@@ -40,36 +44,37 @@ class Model():
                 xest_prev = xest
                 y_output[j,:,i] = np.squeeze(y)
                 errors[j,:,i] = err
-            self.controller.adapt(np.mean(np.sum(errors[:,:,i],axis=1)))
-            self.observer.adapt(np.mean(errors[:,:,i],axis=0))
-            self.target.adapt(self.observer.get_bias(),y-yalt)
         return y_output,errors
         
+    '''
+    Methods for overriding parameters in various formats
+    '''
+    # Override feedback noise in the plant with a tensor
     def set_tunable_params(self,parameter_set):
         self.plant = VocalTract(self.config['Vocal_Tract'],self.ts,arn=10**parameter_set[2].item(),srn=(10**parameter_set[2].item())/parameter_set[3].item())
         self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0].item(),som_delay=parameter_set[1].item())
         self.controller.ugain = parameter_set[4].item()
-        
+    # Override feedback noise in the observer with a tensor
     def set_tunable_params_noise_est(self,parameter_set):
         self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0].item(),som_delay=parameter_set[1].item(), 
                                                   estimated_arn=10**parameter_set[2].item(), estimated_srn=(10**parameter_set[2].item())/parameter_set[3].item())
         self.controller.ugain = parameter_set[4].item()
-        
+    # Override feedback noise in the plant with a list
     def set_tunable_params_list(self,parameter_set):
         self.plant = VocalTract(self.config['Vocal_Tract'],self.ts,arn=10**parameter_set[2],srn=10**parameter_set[2]/parameter_set[3])
         self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0],som_delay=parameter_set[1])
         self.controller.ugain = parameter_set[4]
-        
+    # Override feedback noise in the observer with a list
     def set_tunable_params_noise_est_list(self,parameter_set):
         self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0],som_delay=parameter_set[1], 
                                                   estimated_arn=10**parameter_set[2], estimated_srn=(10**parameter_set[2])/parameter_set[3])
         self.controller.ugain = parameter_set[4]
-        
+    # Override feedback noise in the observer but don't use feedback noise ratio -- set auditory noise to param2 and somat noise to param3
     def set_tunable_params_sa_est_list(self,parameter_set):
         self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0],som_delay=parameter_set[1], 
                                                   estimated_arn=parameter_set[2], estimated_srn=parameter_set[3])
         self.controller.ugain = parameter_set[4]
-        
+    # Override feedback noise in the plant but don't use feedback noise ratio -- set auditory noise to param2 and somat noise to param3
     def set_tunable_params_sa_list(self,parameter_set):
         self.plant = VocalTract(self.config['Vocal_Tract'],self.ts,arn=parameter_set[2],srn=parameter_set[3])
         self.observer = factories.ObserverFactory(self.config['Observer'],self.plant, self.ts,aud_delay=parameter_set[0],som_delay=parameter_set[1])

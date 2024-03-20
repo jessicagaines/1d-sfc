@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
+'''
+Functions for plotting model output
+'''
 def plot_trial_timecourse(t_axis,pitch_output,scale='hertz',baseline=np.array([]),ax=None,color='blue',title=None,ylim=None):
     if ax is None:
         fig,ax = plt.subplots(1,1)

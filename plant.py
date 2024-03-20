@@ -2,11 +2,14 @@
 """
 Created on Fri Apr 23 09:14:16 2021
 
-@author: Jessica Gaines
+@author: John Houde, Jessica Gaines
 """
 import numpy as np
 import control.matlab as ctrl
 
+'''
+Defines the vocal tract plant of the control system as a discrete damped spring-mass system
+'''
 class VocalTract():
     def __init__(self,vocal_tract_params,ts,arn=None,srn=None,qn=None):
         damping_ratio = float(vocal_tract_params['damping_ratio'])

@@ -2,11 +2,15 @@
 """
 Created on Mon Aug 30 15:55:32 2021
 
-@author: Jessica
+@author: Jessica Gaines
 """
 from control_law import ControlLaw,AdaptiveControlLaw,AdaptiveControlLaw_Target
 from observer import Observer,AdaptiveObserverState,AdaptiveObserverFeedback, ObserverFixed, ObserverUnfixed
 from target import Target,AdaptiveTarget,AdaptiveTargetSimple
+
+'''
+Factory methods for dynamic creation of different implementations of model components
+'''
 
 def ControlLawFactory(controller_config,plant):
     controller = None
@@ -30,12 +34,6 @@ def ObserverFactory(observer_config,plant,ts,aud_delay=None,som_delay=None,estim
         elif observer_config['adaptation_type'] == 'matlab':
             observer = AdaptiveObserverFeedback(observer_config,plant,ts,aud_delay,som_delay)
         else: print('Unrecognized observer type')
-    #if 'fixed_kalman_gain' in observer_config:
-    #    if observer_config['fixed_kalman_gain'] == 'fixed':
-    #        observer = ObserverFixed(observer_config,plant,ts,aud_delay,som_delay)
-    #    if observer_config['fixed_kalman_gain'] == 'unfixed':
-    #        observer = ObserverUnfixed(observer_config,plant,ts,aud_delay,som_delay)
-    #else: 
     observer = Observer(observer_config,plant,ts,aud_delay,som_delay,estimated_arn,estimated_srn)
     return observer
 

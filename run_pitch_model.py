@@ -3,6 +3,10 @@
 Created on Fri Apr 23 09:12:32 2021
 
 @author: Jessica Gaines
+
+Run state feedback control model defined by a given config file
+Usage: python run_pitch_model.py [config file]
+This file creates a plot of the simulated response to a feedback perturbation of F0.
 """
 import configparser
 from model import Model
@@ -36,6 +40,5 @@ def make_plots(y_output,errors,alt_onset,ts):
     baseline = np.asarray([starting_pitch]*ntrials)
     #plotting.plot_trial_timecourse(t_axis,pitch_output,scale='Hz',baseline=baseline)
     plotting.plot_trial_timecourse(t_axis,pitch_output,scale='cents',baseline=baseline)
-    #plotting.plot_adaptation(pitch_output,scale='percent',baseline=starting_pitch,endframe=round(0.1/ts))
     
 main(['pitch_pert_configs.ini'])

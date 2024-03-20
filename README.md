@@ -36,15 +36,15 @@ python run_pitch_model.py pitch_pert_configs_w_est.ini
 
 4. Fit model to data using SBI
 ```
-python simulation-based-inference.py [int # training simulations] [int # repetitions of training] [boolean generate new training data?] [int index of parameter to ablate if any]
+python simulation_based_inference.py [int # training simulations] [int # repetitions of training] [boolean generate new training data?] [int index of parameter to ablate if any]
 ```
 * Run 10 repetitions of the inference procedure and store the posterior functions as .pkl files
 ```
-python simulation-based-inference.py 100000 10 True
+python simulation_based_inference.py 100000 10 True
 ```
 * Use previously stored posterior functions from 10 repetitions -- rerun sampling only
 ```
-python simulation-based-inference.py 100000 10 False
+python simulation_based_inference.py 100000 10 False
 ```
 * Ablate parameter 3 (indexing starts at 0) and run inference procedure. Fix parameter 3 at the inferred value for the first data set from the full model (therefore the inference procedure must be run for the full model first before running ablations)
 ```

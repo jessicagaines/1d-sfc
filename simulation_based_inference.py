@@ -2,7 +2,11 @@
 """
 Created on Wed Sep  6 11:06:39 2023
 
-@author: jgaines
+@author: Jessica Gaines
+
+Main file to run simulation-based inference procedures using SFC as a simulator
+Usage: python simulation_based_inference.py [int # training simulations] [int # repetitions of training] [boolean generate new training data?] [int index of parameter to ablate if any]
+Recommend: python simulation_based_inference.py 100000 10 True
 """
 
 import numpy as np

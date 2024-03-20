@@ -2,13 +2,16 @@
 """
 Created on Fri Apr 23 09:14:31 2021
 
-@author: Jessica Gaines
+@author: John Houde, Jessica Gaines
 """
 from util import string2dtype_array
 from collections import deque
 import numpy as np
 import control.matlab as ctrl
 
+'''
+Defines the observer which updates the estimated state based on sensory feedback
+'''
 class Observer():
     def __init__(self,observer_params, plant, ts,aud_delay=None,som_delay=None, estimated_arn=None, estimated_srn=None):
         kalfact_base = float(observer_params['kalfact_base'])
@@ -24,12 +27,15 @@ class Observer():
         self.somat_fdbk_buffer = deque(maxlen=round(self.somat_fdbk_delay/1000/self.ts))
         self.aud_pred_buffer = deque(maxlen=round(self.aud_fdbk_delay/1000/self.ts))
         self.somat_pred_buffer = deque(maxlen=round(self.somat_fdbk_delay/1000/self.ts))
+        # Hierarchy of sensory noise values -- highest priority constructor input, second priority config file. 
+        # If these are unavailable then use plant noise
         if estimated_arn is not None and estimated_srn is not None:
             R = np.diagflat([estimated_arn, estimated_srn])
         elif 'estimated_arn' in observer_params.keys() and 'estimated_srn' in observer_params.keys():
             R = np.diagflat([float(observer_params['estimated_arn']),float(observer_params['estimated_srn'])])
         else:
             R = self.plant.R
+        # Calculate Kalman gain
         [X,L,G] = ctrl.dare(self.plant.sysd.A.T,self.plant.sysd.C.T,self.plant.Q,R)
         kal_gain = X*plant.sysd.C.T * np.linalg.inv(R + self.plant.sysd.C * X * self.plant.sysd.C.T)
         self.kal_gain_scaled = np.multiply(self.Kalfact,kal_gain)
@@ -68,12 +74,6 @@ class Observer():
         self.somat_fdbk_buffer.clear()
         self.aud_pred_buffer.clear()
         self.somat_pred_buffer.clear()
-    
-    def adapt(self,err):
-        return 0
-    
-    def get_bias(self):
-        return np.array([0,0]).reshape((2,1))
 
 def delay_sensory_feedback(buffers,y_alt):
     delayed_fdbk = np.zeros(len(buffers))
@@ -85,55 +85,3 @@ def delay_sensory_feedback(buffers,y_alt):
             delayed_fdbk[i] = buffers[i].pop()
         else: delayed_fdbk[i] = np.nan
     return delayed_fdbk
-    
-class ObserverFixed(Observer):
-    def __init__(self,observer_params, plant, ts):
-        super().__init__(observer_params, plant, ts)
-        self.kal_gain_scaled = np.array([[0.00060795, 0.00109431],
-                                            [0.00071428, 0.00128571],
-                                            [0.04397977, 0.07916358]])
-                                            
-class ObserverUnfixed(Observer):
-    def __init__(self,observer_params, plant, ts):
-        super().__init__(observer_params, plant, ts)
-        self.arn = float(observer_params['aud_noise_covariance'])
-        self.srn = float(observer_params['somat_noise_covariance'])
-        R = np.diagflat([self.arn,self.srn])
-        [X,L,G] = ctrl.dare(plant.sysd.A.T,plant.sysd.C.T,plant.Q,R)
-        kal_gain = X*plant.sysd.C.T * np.linalg.inv(R + plant.sysd.C * X * plant.sysd.C.T)
-        self.kal_gain_scaled = np.multiply(self.Kalfact,kal_gain)
-        
-
-class AdaptiveObserverState(Observer):
-    def __init__(self,observer_params, plant, ts):
-        super().__init__(observer_params, plant, ts)
-        self.weight = np.ones(3).reshape((3,1))
-        self.bias = np.zeros(3).reshape((3,1))
-        self.adaptation_rate = float(observer_params['adaptation_rate'])
-    
-    def predict_state(self,x_est,uprev):
-        return np.multiply(self.weight,super().predict_state(x_est,uprev)) + self.bias
-    
-    def adapt(self,err):
-        self.bias = self.bias + np.array([0,1,0]).reshape((3,1)) * self.adaptation_rate * -err
-        
-    def get_bias(self):
-        return self.bias
-    
-class AdaptiveObserverFeedback(Observer):
-    def __init__(self,observer_params, plant, ts):
-        super().__init__(observer_params, plant, ts)
-        self.weight = np.ones(2).reshape((2,1))
-        self.bias = np.zeros(2).reshape((2,1))
-        self.adaptation_rate = string2dtype_array(observer_params['adaptation_rate'],'float')
-    
-    def predict_feedback(self,x_predict):
-        #return super().predict_feedback(x_predict)
-        return np.multiply(self.weight,super().predict_feedback(x_predict)) + self.bias
-    
-    def adapt(self,err):
-        self.bias[0] = self.bias[0] + (self.adaptation_rate[0] * err[0])
-        self.bias[1] = self.bias[1] + (self.adaptation_rate[1] * err[1])
-        
-    def get_bias(self):
-        return self.bias

@@ -2,7 +2,7 @@
 """
 Created on Wed Sep 22 11:25:40 2021
 
-@author: Jessica
+@author: Jessica Gaines
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,8 +10,11 @@ import scipy.io
 from scipy.interpolate import interp1d
 import pandas as pd
 
-### Reading in different data formats
+'''
+Methods for reading in empirical data
+'''
 
+### Read in data from .mat format
 def get_combined_data_jh(path,file):
     struct = scipy.io.loadmat(path + file, squeeze_me=True,simplify_cells=True).get(file)
     nsubj = len(struct.get('subj'))    
@@ -41,8 +44,11 @@ def downsample(array, npts):
     downsampled = interpolated(np.linspace(0, len(array), npts))
     return downsampled
 
-### Main method for reading in data
-### Determine data format, read in, downsample, and return empirical data    
+'''
+Main method for reading in data
+Determine data format, read in, downsample, and return empirical data 
+Organize data into standard structure
+'''   
 def read_obs(path,condition,read_type,subj_type,color):
     observation = dict()
     if subj_type == "control":
@@ -53,6 +59,7 @@ def read_obs(path,condition,read_type,subj_type,color):
     if read_type == 'jh':
         taxis, data_means, data_stdv, data_stde = get_combined_data_jh(path,subj_type + '_comb_subj_pertresp')
         pert_dur = 0.4
+    # add other read types here
     observation['data'] = data_means
     observation['stdv'] = data_stdv
     observation['stde'] = data_stde

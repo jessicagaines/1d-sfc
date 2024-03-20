@@ -2,11 +2,14 @@
 """
 Created on Fri Apr 23 09:40:59 2021
 
-@author: JLG
+@author: Jessica Gaines
 """
 import numpy as np
 import re
     
+'''
+Utility functions for I/O and data processing
+'''
 def string2dtype_array(string,dtype):
     string = re.sub(r'[\s\[\]]', '', string)
     string_array = np.array(re.split(',', string))
