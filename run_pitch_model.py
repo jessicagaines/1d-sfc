@@ -12,6 +12,7 @@ import configparser
 from model import Model
 import numpy as np
 import plotting
+import matplotlib.pyplot as plt
 
 def main(argv):
     config = configparser.ConfigParser()
@@ -21,11 +22,15 @@ def main(argv):
     ntrials = int(config['Experiment']['n_trials'])
     nframes = round(float(config['Experiment']['end_time'])/ts)
     model = Model(config)
-    #model.set_tunable_params_list([102.7, 35.3, -5, 2.0, 1.9])
+    model.set_tunable_params_list([102.7, 35.3, -5.8, 2.0, 1.9])
+    #model.set_tunable_params_list([102.7, 35.3, -5.8, 2.0, 1.9,-8])
+    #model.set_tunable_params_list([91.5, 15.5, -5.6, 1.0, 3.1,-8])
+    #model.set_tunable_params_list([77.6, 15.8, -4.9, 3.2, 3.7,-10])
     #print(model.observer.kal_gain_scaled)
     #print(model.plant.R)
     y_output,errors = model.run()
     make_plots(y_output,errors,model.feedback_alteration.onset,ts)
+    
 
 def make_plots(y_output,errors,alt_onset,ts):
     # Plotting
@@ -40,5 +45,17 @@ def make_plots(y_output,errors,alt_onset,ts):
     baseline = np.asarray([starting_pitch]*ntrials)
     #plotting.plot_trial_timecourse(t_axis,pitch_output,scale='Hz',baseline=baseline)
     plotting.plot_trial_timecourse(t_axis,pitch_output,scale='cents',baseline=baseline)
+    '''
+    plt.figure()
+    plt.plot(t_axis,np.squeeze(errors))
+    plt.legend(['Aud error','Somat error'])
+    plt.title('Sensory Error',fontsize=18)
+    plt.xlabel('Time (s)',fontsize=18)
+    plt.ylabel('Error (Hz)',fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.show()
+    '''
+    
     
 main(['pitch_pert_configs.ini'])
