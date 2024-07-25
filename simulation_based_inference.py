@@ -70,7 +70,7 @@ def main(argv):
         logfile.write(time.strftime("%H:%M:%S", time.gmtime(time.time()-start)) + " Begin inference\n")
     
     if len(argv) == 3:
-        inferred_values, rmse_means, rmse_stderr = run_sbi(path,'all_params',observation_list,n_simulations,n_samples,n_reps,prior_min_all,prior_max_all,all_labels,train=train)
+        inferred_values, inferred_values_sd, rmse_means, rmse_stderr = run_sbi(path,'all_params',observation_list,n_simulations,n_samples,n_reps,prior_min_all,prior_max_all,all_labels,train=train)
         inferred_control_values = inferred_values[:,0]
         print(inferred_control_values)
         
@@ -86,6 +86,7 @@ def main(argv):
                 logfile.write('\t' + obs.get('name') + ": " + "{:.4f}".format(rmse_means[i]) + "+/-" + "{:.4f}".format(rmse_stderr[i]) + "\n")
         results = {}
         results['inferred_values'] = inferred_values
+        results['inferred_values_sd'] = inferred_values_sd
         results['rmse_means'] = rmse_means
         results['rmse_stderr'] = rmse_stderr
         results['label'] = 'Full Model'
@@ -103,9 +104,10 @@ def main(argv):
         label = all_labels[k]
         label = label.split('(')[0]
         label = label.strip()
-        inferred_values, rmse_means, rmse_stderr = run_sbi(path,'Fix ' + label,observation_list,n_simulations,n_samples,n_reps,prior_min_all,prior_max_all,all_labels,train=train,ablate_index=k,ablate_values=inferred_control_values)
+        inferred_values, inferred_values_sd, rmse_means, rmse_stderr = run_sbi(path,'Fix ' + label,observation_list,n_simulations,n_samples,n_reps,prior_min_all,prior_max_all,all_labels,train=train,ablate_index=k,ablate_values=inferred_control_values)
         results = {}
         results['inferred_values'] = inferred_values
+        results['inferred_values_sd'] = inferred_values_sd
         results['rmse_means'] = rmse_means
         results['rmse_stderr'] = rmse_stderr
         results['label'] = label

@@ -35,9 +35,14 @@ Mark the median of each distribution and the Bayesian credible interval.
 Print the effect size between groups on each plot.
 
 '''
-def violin_plots(obs_list,samples,prior_min,prior_max,effect_size_list=None,effect_size_stderr=None,labels=None,conf_int_level=None,show=True):
-    fig, ax = plt.subplots(1,len(prior_min),figsize=(20*len(prior_min)/5,4))
-    for i in range(len(ax)):
+def violin_plots(obs_list,samples,prior_min,prior_max,effect_size_list=None,effect_size_stderr=None,labels=None,conf_int_level=None,sort=None,ablate_index=None,show=True):
+    n_subplots = len(prior_min)
+    if ablate_index is not None: n_subplots += 1
+    fig, ax = plt.subplots(1,n_subplots,figsize=(20*n_subplots/5,4))
+    all_idx = list(np.arange(n_subplots))
+    if ablate_index is not None:
+        del all_idx[ablate_index]
+    for i,subplot in enumerate(all_idx):
         data_all = pd.DataFrame()
         color_palette = {}
         conf_int = np.ndarray((len(obs_list),3))
@@ -56,37 +61,43 @@ def violin_plots(obs_list,samples,prior_min,prior_max,effect_size_list=None,effe
             color_palette[obs.get('name')] = obs.get('color')
             data_pop['Population'] = obs.get('name')
             data_all = pd.concat([data_all,data_pop])
-        sns.violinplot(x='Population',y='data',palette=color_palette,data=data_all, ax=ax[i],orient='v',inner=None)
+        sns.violinplot(x='Population',y='data',palette=color_palette,data=data_all, ax=ax[subplot],orient='v',inner=None)
         if effect_size_stderr is not None:
-            ax[i].annotate("{:.2f}".format(effect_size_list[i]) + ' +/- ' + "{:.2f}".format(effect_size_stderr[i]),(0.17,0.90),xycoords='axes fraction',size=18)
+            ax[subplot].annotate("{:.2f}".format(effect_size_list[i]) + ' +/- ' + "{:.2f}".format(effect_size_stderr[i]),(0.17,0.90),xycoords='axes fraction',size=18)
         elif effect_size_list is not None:
-            ax[i].annotate(str(round(effect_size_list[i],1)),(0.45,0.90),xycoords='axes fraction',size=18)
+            ax[subplot].annotate(str(round(effect_size_list[i],1)),(0.45,0.90),xycoords='axes fraction',size=18)
         if conf_int_level:
             for j,obs in enumerate(obs_list):
                 #ax[i].scatter(j,data_list[j].get('max_likelihood')[i],marker='.',color='black',s=500)
-                ax[i].scatter(j,conf_int[j,0],marker='_',color='black',s=400)
-                ax[i].scatter(j,conf_int[j,1],marker='.',color='black',s=500)
-                ax[i].scatter(j,conf_int[j,2],marker='_',color='black',s=400)
-                ax[i].plot([j,j],[conf_int[j,0],conf_int[j,2]],color='black',linewidth=2)
-        ax[i].set_ylabel('')
-        if labels: ax[i].set_title(labels[i],fontsize=20)
+                ax[subplot].scatter(j,conf_int[j,0],marker='_',color='black',s=400)
+                ax[subplot].scatter(j,conf_int[j,1],marker='.',color='black',s=500)
+                ax[subplot].scatter(j,conf_int[j,2],marker='_',color='black',s=400)
+                ax[subplot].plot([j,j],[conf_int[j,0],conf_int[j,2]],color='black',linewidth=2)
+        ax[subplot].set_ylabel('')
+        if labels: ax[subplot].set_title(labels[i],fontsize=20)
         buffer = (prior_max[i] - prior_min[i]) * 0.1
-        ax[i].tick_params(axis='y',which='major',labelsize=17)
-        ax[i].tick_params(axis='x',which='major',labelsize=17)
-        ax[i].set_xlabel('')
-        ax[i].set_ylim([prior_min[i]-buffer, prior_max[i]+2*buffer])
-        ax[i].yaxis.offsetText.set_fontsize(15)
-    if effect_size_list is not None:
+        ax[subplot].tick_params(axis='y',which='major',labelsize=17)
+        ax[subplot].tick_params(axis='x',which='major',labelsize=17)
+        ax[subplot].set_xlabel('')
+        ax[subplot].set_ylim([prior_min[i]-buffer, prior_max[i]+2*buffer])
+        ax[subplot].yaxis.offsetText.set_fontsize(15)
+    if ablate_index is not None:
+        ax[ablate_index].axis('off')
+    if sort == 'effect_size':
         plt.subplots_adjust(wspace=0.3)
         sort_indeces = np.argsort(-effect_size_list)
-        positions = []
-        for x in range(len(labels)):
-            positions.append(ax[x].get_position())
-        for x in range(len(labels)):
-            ax[sort_indeces[x]].set_position(positions[x])
+    elif sort == 'set_order':
+        plt.subplots_adjust(wspace=0.3)
+        sort_indeces = [3,4,0,2,1]
     else:
         plt.tight_layout()
-    ax[sort_indeces[0]].set_ylabel('Parameter value',fontsize=18)
+    if sort is not None:
+        positions = []
+        for x in range(len(sort_indeces)):
+            positions.append(ax[x].get_position())
+        for x in range(len(sort_indeces)):
+            ax[sort_indeces[x]].set_position(positions[x])
+        ax[sort_indeces[0]].set_ylabel('Parameter value',fontsize=18)
     return fig
 
 '''
@@ -167,6 +178,15 @@ def sbi_train(path,subdir,simulator,prior_min,prior_max,seed,n_simulations):
     np.random.seed(seed)
     torch.manual_seed(seed)
     prior = utils.torchutils.BoxUniform(low=torch.as_tensor(prior_min), high=torch.as_tensor(prior_max))
+    '''
+    prior = [
+        torch.distributions.normal.Normal(torch.tensor([125],dtype=torch.float32),torch.tensor([25],dtype=torch.float32)),
+        torch.distributions.normal.Normal(torch.tensor([41.5],dtype=torch.float32),torch.tensor([12.83],dtype=torch.float32)),
+        torch.distributions.normal.Normal(torch.tensor([-4.75],dtype=torch.float32),torch.tensor([0.583],dtype=torch.float32)),
+        torch.distributions.normal.Normal(torch.tensor([3.05],dtype=torch.float32),torch.tensor([0.983],dtype=torch.float32)),
+        torch.distributions.normal.Normal(torch.tensor([4.05],dtype=torch.float32),torch.tensor([1.317],dtype=torch.float32))
+        ]
+    '''
     posterior = infer(simulator,prior,method='SNPE', num_simulations=n_simulations, num_workers=4)
     posterior_save = {'prior_min':prior_min,'prior_max':prior_max,'posterior':posterior,'seed':seed}
     if not os.path.exists(os.path.join(path,subdir,'posterior')): 
@@ -285,10 +305,12 @@ def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,pr
         title = 'Fixed ' + ablated_label.split('(')[0]
         figlabel = ['C','E','D','A','B'][ablate_index]
         ylim = [-5,45]
+        sort = 'set_order'
     else: 
         title = ''
         figlabel = ''
         ylim = None
+        sort = 'effect_size'
     combined_samples = np.ndarray((n_reps*n_samples,len(labels),len(obs_list)))
     for seed in range(n_reps):
         # train
@@ -300,6 +322,7 @@ def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,pr
         for i in range(len(obs_list)):
             combined_samples[n_samples*seed:n_samples*(seed+1),:,i] = all_samples[:,:,i]
     inferred_values = np.median(combined_samples, axis=0)
+    inferred_values_sd = np.std(combined_samples, axis=0)
     # bootstrap
     n_bootstrap = 100
     size_bootstrap = 1000
@@ -316,10 +339,10 @@ def run_sbi(path,subdir,obs_list,n_simulations,n_samples,n_reps,prior_min_all,pr
     plt.tight_layout()
     fig.savefig(os.path.join(path,subdir,'pitch_plots' + '.eps'),format='eps',dpi=600)
     #fig.savefig(os.path.join(path,subdir,'pitch_plots' + '.png'),format='png')
-    fig = violin_plots(obs_list,combined_samples,prior_min,prior_max,effect_size_list=effect_size_list,effect_size_stderr=effect_size_stderr,labels=labels,conf_int_level=0.95,show=True)
+    fig = violin_plots(obs_list,combined_samples,prior_min,prior_max,effect_size_list=effect_size_list,effect_size_stderr=effect_size_stderr,labels=labels,conf_int_level=0.95,sort=sort,ablate_index=ablate_index,show=True)
     fig.savefig(os.path.join(path,subdir,'violin_plots' + '.eps'),format='eps',dpi=600)
     #fig.savefig(os.path.join(path,subdir,'violin_plots' + '.png'),format='png')
-    return inferred_values, rmse_mean, rmse_sterr
+    return inferred_values, inferred_values_sd, rmse_mean, rmse_sterr
 
 '''
 Plot ablation study results: root mean square error from empirical data for 
@@ -385,3 +408,44 @@ bar_plot(path = os.path.join(os.getcwd(),'SBI_results_final_for_paper'), all_lab
          additional_bars=[{'label': '*Fixed Obs Est of Noise', 'path': os.path.join(os.getcwd(),'SBI_results_fixed_est')}
                           ,{'label': '*Fixed Actual Noise Only', 'path': os.path.join(os.getcwd(),'SBI_results_fixed_actual')}],
          filename='supplementary_bar_plot.eps')
+
+def sensitivity_analysis(path,all_labels,filename='sensitivity_analysis.eps'):
+    simulator = build_simulator(training_noise_scale=0)
+    with open(os.path.join(path,'results_' + str(0) + '.pkl'), "rb") as handle:
+        results = pickle.load(handle)
+    obs_list = results.get('observation_list')
+    inferred_values = results.get('inferred_values')
+    inferred_values_sd = results.get('inferred_values_sd')
+    points = [-2,-1,0,1,2]
+    fig, ax = plt.subplots(1,len(all_labels),figsize=(30,4))
+    for i,label in enumerate(all_labels):
+        ax[i].set_title(label,fontsize=20)
+        for j,obs in enumerate(obs_list):
+            inferred_values_obs = inferred_values[:,j]
+            baseline_simulation = simulator(inferred_values_obs)
+            param_med = inferred_values_obs[i]
+            param_sd = inferred_values_sd[i,j]
+            for k,point in enumerate(points):
+                updated_values = copy.deepcopy(inferred_values_obs)
+                updated_values[i] = param_med + point*param_sd
+                try:
+                    simulation = simulator(updated_values)
+                except:
+                    continue
+                rmse_calc = rmse(baseline_simulation,simulation)
+                ax[i].bar(x=k+0.3*j, height=rmse_calc,width=0.2,color=obs.get('color'))
+        ax[i].set_xticks(ticks=range(len(points)),labels=[r'$\Theta$+ ' + str(p) + r'$\sigma$' for p in points])
+        ax[i].set_ylim([0,5])
+        ax[i].tick_params(axis='both',which='major',labelsize=16)
+    ax[0].set_ylabel('RMSE (cents)',fontsize=18)
+    plt.tight_layout()
+    plt.savefig(os.path.join(path,filename),format='eps',dpi=600)
+'''  
+sensitivity_analysis(path = os.path.join(os.getcwd(),'SBI_results_final_for_paper'),
+                     all_labels = ['Aud Delay (ms)',
+                               'Somat Delay (ms)',
+                               'Fb Noise Var (log)',
+                               'Fb Noise Ratio (Aud:Som)',
+                               'Controller Gain'],
+                               filename='sensitivity_analysis.eps')
+'''
