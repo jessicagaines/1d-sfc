@@ -52,9 +52,9 @@ Organize data into standard structure
 def read_obs(path,condition,read_type,subj_type,color):
     observation = dict()
     if subj_type == "control":
-        observation['name'] = "Controls"
+        observation['name'] = "Control"
     else:
-        name = condition + " " + subj_type +'s'
+        name = condition
         observation['name'] = name
     if read_type == 'jh':
         taxis, data_means, data_stdv, data_stde = get_combined_data_jh(path,subj_type + '_comb_subj_pertresp')
