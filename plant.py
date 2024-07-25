@@ -11,17 +11,18 @@ import control.matlab as ctrl
 Defines the vocal tract plant of the control system as a discrete damped spring-mass system
 '''
 class VocalTract():
-    def __init__(self,vocal_tract_params,ts,arn=None,srn=None,qn=None):
+    def __init__(self,vocal_tract_params,ts,arn=None,srn=None,qn=None,b=None,k=None,m=None):
         damping_ratio = float(vocal_tract_params['damping_ratio'])
-        k = float(vocal_tract_params['spring_constant'])
-        m = float(vocal_tract_params['mass'])
+        if k is None: k = float(vocal_tract_params['spring_constant'])
+        if m is None: m = float(vocal_tract_params['mass'])
         if arn is None: self.arn = float(vocal_tract_params['aud_noise_covariance'])
         else: self.arn = arn
         if srn is None: self.srn = float(vocal_tract_params['somat_noise_covariance'])
         else: self.srn = srn
         if qn is None: self.qn = float(vocal_tract_params['state_noise_covariance'])
         else: self.qn = qn
-        damping = damping_ratio*2*np.sqrt(m*k)
+        if b is None: damping = damping_ratio*2*np.sqrt(m*k)
+        else: damping = b
         A = np.array([[0, 1], [-k/m, -damping/m]])
         B = np.array([[0, k/m]]).T
         #C = np.array([[100, 0], [100, 0]])
