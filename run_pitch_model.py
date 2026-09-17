@@ -19,8 +19,6 @@ def main(argv):
     config.read(argv[0])
     np.random.seed(100)
     ts = float(config['Experiment']['sampling_time'])
-    ntrials = int(config['Experiment']['n_trials'])
-    nframes = round(float(config['Experiment']['end_time'])/ts)
     model = Model(config)
     model.set_tunable_params_list([102.7, 35.3, -5.8, 2.0, 1.9])
     #model.set_tunable_params_list([102.7, 35.3, -5.8, 2.0, 1.9,-8])

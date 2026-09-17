@@ -39,6 +39,6 @@ class VocalTract():
         #add system dependent noise
         state_noise = np.matmul(np.random.normal(0,1,self.sysd.A.shape[0]),np.linalg.cholesky(self.Q)).reshape((3,1))
         obs_noise = np.matmul(np.random.normal(0,1,self.sysd.C.shape[0]),np.linalg.cholesky(self.R)).reshape((2,1))
-        x = self.sysd.A*xprev + self.sysd.B*uprev + state_noise
-        y = self.sysd.C*x + obs_noise
+        x = np.matmul(self.sysd.A,xprev) + self.sysd.B*uprev + state_noise
+        y = np.matmul(self.sysd.C,x) + obs_noise
         return x,y

@@ -1,16 +1,15 @@
 name: 1d_sfc_env
 channels:
-  - anaconda
-  - conda-forge
   - defaults
 dependencies:
-  - python=3.9.7
-  - pip=21.2.4
-  - numpy=1.21.5
-  - control=0.9.1
-  - matplotlib=3.5.0
-  - scipy=1.7.3
-  - jupyter=1.0.0
-  - seaborn=0.11.2
+  - python=3.12.11
+  - m2w64-toolchain=5.3.0
+  - pip=25.2
   - pip:
-    - sbi==0.17.2
+    - sbi==0.24.0
+    - control==0.10.2
+    - spyder==6.0.8
+    - seaborn==0.13.2
+    - numpy==2.3.3
+    - scipy==1.16.2
+    - spyder-notebook==0.7.1

@@ -20,7 +20,7 @@ class Target():
         self.C = plant.sysd.C
         target_state = (1/plant.sysd.C[0,1])*self.target_pitch
         self.x_targ = np.array([[0],[target_state],[0]])
-        self.y_targ = np.array([[self.target_pitch],[(self.C[1,:]*self.x_targ).item()]])
+        self.y_targ = np.array([[self.target_pitch],[np.matmul(self.C[1,:],self.x_targ).item()]])
         
     def get_xtarg(self):
         return self.x_targ

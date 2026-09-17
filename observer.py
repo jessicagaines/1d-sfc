@@ -37,7 +37,7 @@ class Observer():
             R = self.plant.R
         # Calculate Kalman gain
         [X,L,G] = ctrl.dare(self.plant.sysd.A.T,self.plant.sysd.C.T,self.plant.Q,R)
-        kal_gain = X*plant.sysd.C.T * np.linalg.inv(R + self.plant.sysd.C * X * self.plant.sysd.C.T)
+        kal_gain = np.matmul(np.matmul(X,self.plant.sysd.C.T),np.linalg.inv(R + np.matmul(np.matmul(self.plant.sysd.C,X),self.plant.sysd.C.T)))
         self.kal_gain_scaled = np.multiply(self.Kalfact,kal_gain)
         
     def run(self, x_est,uprev,y_alt):
@@ -61,10 +61,10 @@ class Observer():
         return x_est_new, err, y_delayed, y_predict
     
     def predict_state(self,x_est,uprev):
-        return self.plant.sysd.A*x_est + self.plant.sysd.B*uprev
+        return np.matmul(self.plant.sysd.A,x_est) + self.plant.sysd.B*uprev
     
     def predict_feedback(self,x_predict):
-        return self.plant.sysd.C * x_predict
+        return np.matmul(self.plant.sysd.C , x_predict)
     
     def update_state_estimate(self,x_est,kalman_gain,errors):
         return x_est + np.dot(kalman_gain,errors)
