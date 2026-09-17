@@ -29,6 +29,16 @@ def main(argv):
     y_output,errors = model.run()
     make_plots(y_output,errors,model.feedback_alteration.onset,ts)
     
+def demo(config_file, tunable_params):
+    config = configparser.ConfigParser()
+    config.read(config_file)
+    np.random.seed(100)
+    ts = float(config['Experiment']['sampling_time'])
+    model = Model(config)
+    model.set_tunable_params_list(tunable_params)
+    y_output,errors = model.run()
+    make_plots(y_output,errors,model.feedback_alteration.onset,ts)
+    
 
 def make_plots(y_output,errors,alt_onset,ts):
     # Plotting
@@ -56,4 +66,4 @@ def make_plots(y_output,errors,alt_onset,ts):
     '''
     
     
-main(['pitch_pert_configs.ini'])
+#main(['pitch_pert_configs.ini'])
